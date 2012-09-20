@@ -75,11 +75,40 @@ Game.prototype.drawLines = function(){
 
 Game.prototype.displayShadowStone = function(board_node){
    var ctx = this.canvas.getContext('2d');
-   var point = this.nodeToPoint(board_node);
 
-   ctx.drawImage(this.images.w,
+   var rm_old = false;
+   var draw_new = false;
+
+   if (board_node != null && this.shadow_node != null){
+      if (board_node[0]!=this.shadow_node[0] || board_node[1]!=this.shadow_node[1]){
+         draw_new = true;
+         rm_old = true;
+      }
+   } else if (board_node == null && this.shadow_node != null){
+      rm_old = true;
+   } else if (board_node != null){
+      draw_new = true;
+   }
+
+   if(rm_old == true) {
+      //clear shadow stone. replace with empty board section.
+      var point = this.nodeToPoint(this.shadow_node);
+      var x = point[0] - this.node_w/2;
+      var y = point[1] - this.node_h/2;
+      ctx.putImageData(this.empty_board_image_data, 
+            0,0,x,y, this.node_w, this.node_h);
+      this.shadow_node = null;
+   }
+
+   if(draw_new == true) {
+      var point = this.nodeToPoint(board_node);
+      ctx.globalAlpha = .5;
+      ctx.drawImage(this.images.w,
          point[0] - this.node_w/2, point[1]-this.node_h/2,
          this.node_w, this.node_h);
+      this.shadow_node = board_node;
+   }
+
    
 
 }
