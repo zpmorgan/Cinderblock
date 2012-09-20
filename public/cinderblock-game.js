@@ -1,0 +1,132 @@
+
+
+function Game(){
+   this.canvas = null;
+   this.w = 19;
+   this.h = 19;
+   this.h_lines = [];
+   this.v_lines = [];
+}
+Game.prototype.setCanvas = function(cnvs){
+   this.canvas = cnvs;
+   var margin = this.margin = 24;
+   var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
+   this.grid_box = grid_box;
+   this.grid_w = grid_box[2] - grid_box[0];
+   this.grid_h = grid_box[3] - grid_box[1];
+   this.node_w = this.grid_w / (this.w-1);
+   this.node_h = this.grid_h / (this.h-1);
+}
+
+Game.prototype.draw = function(){
+   if(!this.canvas){
+      alert('no canvas! ' + this.canvas);
+      return;
+   }
+   var game = this;
+   var ctx = game.canvas.getContext('2d');
+   ctx.fillStyle = 'red';
+   //var bg = $("#wood-bg")[0];
+   this.image_urls = {w:"w.png",b:"b.png",bg:"/light_coloured_wood_200142.JPG"};
+   this.images = new Object();
+   this.images.b = new Image();
+   this.images.b.src = this.image_urls["b"];
+   this.images.w = new Image();
+   this.images.w.src = this.image_urls["w"];
+
+   this.images.bg = new Image();
+   this.images.bg.onload = function(){
+      ctx.drawImage(game.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
+      game.drawLines();
+   };
+   this.images.bg.src = this.image_urls['bg'];
+}
+
+Game.prototype.drawLines = function(){
+   var game = this;
+   var ctx = game.canvas.getContext('2d');
+   var margin = this.margin = 24;
+   var grid_box = this.grid_box;
+   //vertical lines
+   for(i=0;i<this.w;i++){
+      var p = i / (this.w-1);
+      var x = grid_box[0] + (p * this.grid_w)
+      this.v_lines[i] = x;
+      ctx.lineWidth = 1.2;
+      ctx.moveTo(x, grid_box[1]);
+      ctx.lineTo(x, grid_box[3]);
+      ctx.stroke();
+   }
+   // h lines
+   for(i=0;i<this.h;i++){
+      var p = i / (this.h-1);
+      var y = grid_box[1] + (p * this.grid_h);
+      this.v_lines[i] = y;
+      ctx.lineWidth = 1.2;
+      ctx.moveTo(grid_box[0], y);
+      ctx.lineTo(grid_box[2], y);
+      ctx.stroke();
+   }
+   //copy empty board to paste over removed stuff.
+   this.empty_board_image_data = 
+      ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+   this.activate();
+}
+
+Game.prototype.displayShadowStone = function(board_node){
+   var ctx = this.canvas.getContext('2d');
+   var point = this.nodeToPoint(board_node);
+
+   ctx.drawImage(this.images.w,
+         point[0] - this.node_w/2, point[1]-this.node_h/2,
+         this.node_w, this.node_h);
+   
+
+}
+
+Game.prototype.activate = function(){
+   var game = this;
+   $(game.canvas).mousemove(function(e){
+      var x = e.pageX - this.offsetLeft;
+      var y = e.pageY - this.offsetTop;
+      var boardnode = game.canvasXYToNode(x,y);
+      if(!boardnode){ return;}
+      game.displayShadowStone(boardnode);
+   });
+}
+
+Game.prototype.nodeToPoint = function(node){
+   var row = node[0];
+   var col = node[1];
+   var x = this.grid_box[0] + this.grid_w * col / (this.w-1);
+   var y = this.grid_box[1] + this.grid_h * row / (this.h-1);
+   return [x,y];
+}
+
+Game.prototype.canvasXYToNode = function(x,y){
+   var row = -1, col = -1;
+   var reach_x = this.node_w/2;
+   var reach_y = this.node_h/2;
+   for (i=0;i<this.w;i++){
+      var node_x = this.grid_box[0] + i*this.node_w;
+      if( (x > node_x-reach_x) && (x < node_x+reach_x)){
+         col = i;
+         break;
+      }
+   }
+   for (i=0;i<this.h;i++){
+      var node_y = this.grid_box[1] + i*this.node_h;
+      if( (y > node_y-reach_y) && (y < node_y+reach_y)){
+         row = i;
+         break;
+      }
+   }
+   if (row == -1 || col == -1){
+      return null;
+   }
+   return [row,col];
+}
+
+
+
+
