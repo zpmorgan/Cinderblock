@@ -6,6 +6,7 @@ function Game(){
    this.h = 19;
    this.h_lines = [];
    this.v_lines = [];
+   this.move_events = [];
 }
 Game.prototype.setCanvas = function(cnvs){
    this.canvas = cnvs;
@@ -73,6 +74,19 @@ Game.prototype.drawLines = function(){
    this.activate();
 }
 
+// drop_stone?
+Game.prototype.displayMove = function(move_data){
+   var ctx = this.canvas.getContext('2d');
+
+   var move_node = [move_data.row, move_data.col];
+   var point = this.nodeToPoint(move_node);
+   var stone_img = this.images[move_data.stone];
+
+   ctx.drawImage(stone_img,
+         point[0] - this.node_w/2, point[1]-this.node_h/2,
+         this.node_w, this.node_h);
+}
+
 Game.prototype.displayShadowStone = function(board_node){
    var ctx = this.canvas.getContext('2d');
 
@@ -107,10 +121,8 @@ Game.prototype.displayShadowStone = function(board_node){
          point[0] - this.node_w/2, point[1]-this.node_h/2,
          this.node_w, this.node_h);
       this.shadow_node = board_node;
+      ctx.globalAlpha = 1;
    }
-
-   
-
 }
 
 Game.prototype.activate = function(){
@@ -122,6 +134,7 @@ Game.prototype.activate = function(){
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
    });
+   this.openSocket();
 }
 
 Game.prototype.nodeToPoint = function(node){
@@ -157,5 +170,25 @@ Game.prototype.canvasXYToNode = function(x,y){
 }
 
 
+Game.prototype.openSocket = function(){
+   var game = this;
+   
+   conn = new WebSocket('ws://127.0.0.1:3000/game/sock');
 
+   conn.onmessage = function  (event) {
+      game.log('msg: '+event.data);
+      var data = $.parseJSON(event.data);
+      game.log(data.event_type);
+      if(data.event_type == 'move'){
+         game.displayMove(data.move);
+      }
+   };
+   conn.onopen = function () {
+      game.log('Socket open');
+   };
+}
+
+Game.prototype.log = function(m){
+   $('.sock-event-box').prepend(m + '<br />');
+}
 

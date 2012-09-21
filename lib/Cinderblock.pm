@@ -13,7 +13,7 @@ sub startup {
 
   # Normal route to controller
   $r->get('/game')->to('game#index');
-  $r->get('/game/event_socket')->to('game#game_event_socket');
+  $r->websocket('/game/sock')->to('game#game_event_socket');
 }
 
 1;
