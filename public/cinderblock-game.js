@@ -7,6 +7,9 @@ function Game(){
    this.h_lines = [];
    this.v_lines = [];
    this.move_events = [];
+   this.actual_board = [];
+   for(i=0;i<this.w;i++)
+      this.actual_board.push([]);
 }
 Game.prototype.setCanvas = function(cnvs){
    this.canvas = cnvs;
@@ -74,13 +77,17 @@ Game.prototype.drawLines = function(){
    this.activate();
 }
 
-// drop_stone?
-Game.prototype.displayMove = function(move_data){
+Game.prototype.handleMoveEvent = function(move_data){
+   this.move_events.push(move_data);
+   var move_node = [move_data.row, move_data.col];
+   this.dropStone(move_data.stone, move_node);
+   this.setActualBoardNode(move_node, move_data.stone);
+}
+Game.prototype.dropStone = function(stone, node){
    var ctx = this.canvas.getContext('2d');
 
-   var move_node = [move_data.row, move_data.col];
-   var point = this.nodeToPoint(move_node);
-   var stone_img = this.images[move_data.stone];
+   var point = this.nodeToPoint(node);
+   var stone_img = this.images[stone];
 
    ctx.drawImage(stone_img,
          point[0] - this.node_w/2, point[1]-this.node_h/2,
@@ -103,6 +110,10 @@ Game.prototype.displayShadowStone = function(board_node){
    } else if (board_node != null){
       draw_new = true;
    }
+   // don't do shadow if an actual stone is there.
+   var colliding_stone = this.getStoneAtActualNode(board_node);
+   if (colliding_stone)
+      draw_new = false;
 
    if(rm_old == true) {
       //clear shadow stone. replace with empty board section.
@@ -125,14 +136,25 @@ Game.prototype.displayShadowStone = function(board_node){
    }
 }
 
+Game.prototype.mouseEventToRelCoords = function(e, canvas_selector){
+   var x = e.pageX - canvas_selector.offsetLeft;
+   var y = e.pageY - canvas_selector.offsetTop;
+   return [x,y];
+}
+
 Game.prototype.activate = function(){
    var game = this;
    $(game.canvas).mousemove(function(e){
-      var x = e.pageX - this.offsetLeft;
-      var y = e.pageY - this.offsetTop;
-      var boardnode = game.canvasXYToNode(x,y);
+      var point = game.mouseEventToRelCoords(e,this);
+      var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
+   });
+   $(game.canvas).mousedown(function(e){
+      var point = game.mouseEventToRelCoords(e,this);
+      var boardnode = game.canvasXYToNode(point[0],point[1]);
+      if(!boardnode){ return;}
+      game.attemptMove(boardnode);
    });
    this.openSocket();
 }
@@ -174,21 +196,48 @@ Game.prototype.openSocket = function(){
    var game = this;
    
    conn = new WebSocket('ws://127.0.0.1:3000/game/sock');
+   this.sock = conn;
 
    conn.onmessage = function  (event) {
       game.log('msg: '+event.data);
       var data = $.parseJSON(event.data);
       game.log(data.event_type);
       if(data.event_type == 'move'){
-         game.displayMove(data.move);
+         game.handleMoveEvent(data.move);
       }
    };
    conn.onopen = function () {
       game.log('Socket open');
+   };
+   conn.onclose = function () {
+      game.log('Socket close');
    };
 }
 
 Game.prototype.log = function(m){
    $('.sock-event-box').prepend(m + '<br />');
 }
+
+Game.prototype.setActualBoardNode = function(node, stone){
+   this.actual_board[node[0]][node[1]] = stone;
+}
+Game.prototype.getStoneAtActualNode = function(node){
+   return this.actual_board[node[0]][node[1]];
+}
+
+// return 0 on fail, 1 on maybe?
+Game.prototype.attemptMove = function(node){
+   var stone_collision = this.getStoneAtActualNode(node);
+   if(stone_collision)
+      return 0;
+   var attempt = {
+      action: 'attempt_move',
+      move_attempt: {
+         "node" : node,
+         "stone": 'b'
+      }
+   };
+   this.sock.send(JSON.stringify(attempt));
+}
+
 
