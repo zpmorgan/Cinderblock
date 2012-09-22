@@ -243,7 +243,7 @@ Game.prototype.attemptMove = function(node){
       action: 'attempt_move',
       move_attempt: {
          "node" : node,
-         "stone": 'b'
+         "stone": PORTAL_DATA.color,
       }
    };
    this.sock.send(JSON.stringify(attempt));

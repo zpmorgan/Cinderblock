@@ -27,7 +27,7 @@
 var PORTAL_DATA = {
    game_id: <%=stash('game_id')%>,
    role: "player",
-   side: "w",
+   color: "w",
 };
 
 var relevantGame;
