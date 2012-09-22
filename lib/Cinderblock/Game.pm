@@ -62,7 +62,7 @@ sub game_event_socket{
    $sub_redis->timeout(180);
    $self->stash(sub_redis => $sub_redis);
    # push game events when they come down the tube.
-   $sub_redis->subscribe('g' => sub{
+   $sub_redis->subscribe('game_events:'.$game_id => sub{
          my ($redis, $event) = @_;
          return if $event->[0] eq 'subscribe';
          $ws->send($event->[2]);
@@ -100,8 +100,9 @@ sub game_event_socket{
 # request made through websocket.
 sub attempt_move{
    my ($self, $msg_data) = @_;
+   my $game_id = $self->stash('game_id');
    my $redis1 = Mojo::Redis->new();
-   $redis1->get ('game:4' => sub{
+   $redis1->get ("game:$game_id" => sub{
          my ($redis,$game) = @_;
          $game = $json->decode($game);
          my $board = $game->{board};
@@ -120,7 +121,7 @@ sub attempt_move{
          };
          push @{$game->{move_events}}, $new_event;
 
-         $redis->set('game:4', $json->encode($game) => sub{$redis1});
+         $redis->set("game:$game_id", $json->encode($game) => sub{$redis1});
          $self->publish_move_event($new_event);
       });
 }
@@ -131,7 +132,7 @@ sub publish_move_event{
       event_type => 'move',
       move => $mov,
    };
-   $pub_redis->publish('g' => $json->encode($event));
+   $pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
 }
 
 1;
