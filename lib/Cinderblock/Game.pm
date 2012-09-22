@@ -1,15 +1,31 @@
 package Cinderblock::Game;
+use common::sense;
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
+use Mojo::Redis;
+
+use Protocol::Redis::XS;
 
 # This action will render a template
 sub game_event_socket{
    my $self = shift;
 
-   warn("Client Connect: ".$self->tx);
+#   warn("Client Connect: ".$self->tx);
    my $ws = $self->tx;
-   $ws->send(join '',1..30);
+   $ws->send('hello');
+   
+   my $pubsub = Mojo::Redis->new;
+   $pubsub->protocol_redis("Protocol::Redis::XS");
+   $pubsub->timeout(180);
+   $self->stash(pubsub_redis => $pubsub);
+   # push game events when they come down the tube.
+   $pubsub->subscribe('g' => sub{
+         my ($redis, $event) = @_;
+         return if $event->[0] eq 'subscribe';
+         $ws->send($event->[2]);
+      });
+   
 
    $self->on(message => sub {
          my ($ws, $msg) = @_;
@@ -24,51 +40,44 @@ sub game_event_socket{
          my $ws = shift;
          say 'WebSocket closed.';
       });
-   Mojo::IOLoop->recurring(1 => sub{
-         my $msg = {
-            event_type => 'move',
-            move => {
-               row => int rand(19),
-               col => int rand(19),
-               stone => (rand>.5) ? 'b' : 'w',
-            }
-         };
-         $ws->send($json->encode($msg));
+   Mojo::IOLoop->recurring(10 => sub{
+         $ws->send('hello');
       });
 }
 
-use Mojo::Redis;
 # request made through websocket.
 sub attempt_move{
    my ($self, $msg_data) = @_;
-   my $redis = Mojo::Redis->new();
-
-   $redis->get ('game:4' => sub{
+   my $redis1 = Mojo::Redis->new();
+   $redis1->get ('game:4' => sub{
          my ($redis,$game) = @_;
+         $game = $json->decode($game);
          my $board = $game->{board};
          my $move_attempt = $msg_data->{move_attempt};
-         my $row = $move_attempt->{row};
-         my $col = $move_attempt->{col};
+         my $row = $move_attempt->{node}[0];
+         my $col = $move_attempt->{node}[1];
          my $collision = $board->[$row][$col];
          if($collision){return}
-         $board->[$row][$col] = $move_attempt->{stone};
 
-         my $move_events = $game->{move_events};
+         $game->{board}->[$row][$col] = $move_attempt->{stone};
+
+         #my $move_events = $game->{move_events};
          my $new_event = {
             node => [$row,$col],
             stone => $move_attempt->{stone},
          };
-         push @{$move_events}, $new_event;
-         $redis->set('game:4', $game => sub{$redis->quit});
+         push @{$game->{move_events}}, $new_event;
+
+         $redis->set('game:4', $json->encode($game) => sub{$redis1});
+         $redis->set('game', $$, sub{$redis1});
          $self->publish_move_event($new_event);
       });
-   $redis->get ('game:4' => 4);
-   #$redis->ioloop->start;
-   $redis->get ('game' => sub{$redis->quit; die @_});
 }
 
 sub publish_move_event{
    my ($self,$mov) = @_;
+   my $pubsub = $self->stash('pubsub_redis');
+   $pubsub->publish('g' => $json->encode($mov));
 }
 
 1;
