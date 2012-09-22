@@ -24,6 +24,12 @@
 <canvas id="goban" width="550" height="550"></canvas>
 
 <script type="text/javascript">
+var PORTAL_DATA = {
+   game_id: <%=stash('game_id')%>,
+   role: "player",
+   side: "w",
+};
+
 var relevantGame;
 $(document).ready(function(){
    relevantGame = new Game;

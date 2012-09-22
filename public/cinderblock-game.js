@@ -6,7 +6,9 @@ function Game(){
    this.h = 19;
    this.h_lines = [];
    this.v_lines = [];
+
    this.move_events = [];
+
    this.actual_board = [];
    for(i=0;i<this.w;i++)
       this.actual_board.push([]);
@@ -31,7 +33,7 @@ Game.prototype.draw = function(){
    var ctx = game.canvas.getContext('2d');
    ctx.fillStyle = 'red';
    //var bg = $("#wood-bg")[0];
-   this.image_urls = {w:"w.png",b:"b.png",bg:"/light_coloured_wood_200142.JPG"};
+   this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142.JPG"};
    this.images = new Object();
    this.images.b = new Image();
    this.images.b.src = this.image_urls["b"];
@@ -79,21 +81,31 @@ Game.prototype.drawLines = function(){
 
 Game.prototype.handleMoveEvent = function(move_data){
    this.move_events.push(move_data);
-   var move_node = [move_data.row, move_data.col];
+   var move_node = move_data.node;
    this.dropStone(move_data.stone, move_node);
    this.setActualBoardNode(move_node, move_data.stone);
 }
 Game.prototype.dropStone = function(stone, node){
+   if (this.shadow_node)
+      this.eraseShadowStone();
    var ctx = this.canvas.getContext('2d');
-
    var point = this.nodeToPoint(node);
    var stone_img = this.images[stone];
-
    ctx.drawImage(stone_img,
          point[0] - this.node_w/2, point[1]-this.node_h/2,
          this.node_w, this.node_h);
 }
 
+// clear shadow stone. replace with empty board section.
+Game.prototype.eraseShadowStone = function(){
+   var ctx = this.canvas.getContext('2d');
+   var point = this.nodeToPoint(this.shadow_node);
+   var x = point[0] - this.node_w/2;
+   var y = point[1] - this.node_h/2;
+   ctx.putImageData(this.empty_board_image_data, 
+         0,0,x,y, this.node_w, this.node_h);
+   this.shadow_node = null;
+}
 Game.prototype.displayShadowStone = function(board_node){
    var ctx = this.canvas.getContext('2d');
 
@@ -116,13 +128,7 @@ Game.prototype.displayShadowStone = function(board_node){
       draw_new = false;
 
    if(rm_old == true) {
-      //clear shadow stone. replace with empty board section.
-      var point = this.nodeToPoint(this.shadow_node);
-      var x = point[0] - this.node_w/2;
-      var y = point[1] - this.node_h/2;
-      ctx.putImageData(this.empty_board_image_data, 
-            0,0,x,y, this.node_w, this.node_h);
-      this.shadow_node = null;
+      this.eraseShadowStone();
    }
 
    if(draw_new == true) {
@@ -195,13 +201,13 @@ Game.prototype.canvasXYToNode = function(x,y){
 Game.prototype.openSocket = function(){
    var game = this;
    
-   conn = new WebSocket('ws://127.0.0.1:3000/game/sock');
+   conn = new WebSocket('ws://127.0.0.1:3000/game/'+  PORTAL_DATA.game_id  +'/sock');
    this.sock = conn;
 
    conn.onmessage = function  (event) {
       game.log('msg: '+event.data);
       var data = $.parseJSON(event.data);
-      game.log(data.event_type);
+      //game.log(data.event_type);
       if(data.event_type == 'move'){
          game.handleMoveEvent(data.move);
       }
@@ -219,6 +225,9 @@ Game.prototype.log = function(m){
 }
 
 Game.prototype.setActualBoardNode = function(node, stone){
+   if(this.actual_board[node[0]] == null)
+      this.actual_board[node[0]] = [];
+
    this.actual_board[node[0]][node[1]] = stone;
 }
 Game.prototype.getStoneAtActualNode = function(node){
