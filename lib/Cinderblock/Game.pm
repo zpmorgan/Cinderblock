@@ -4,6 +4,9 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
+use basilisk::Rulemap;
+use basilisk::Rulemap::Rect;
+
 sub sessid{
    my $self = shift;
    my $sessid = $self->session('session_id');
@@ -26,9 +29,10 @@ sub new_game{
 
    my $game_id = $self->redis_block(incr => 'next_game_id');
    my $sessid = $self->sessid;
+   my $board = [ map{[map {''} 1..$w]} 1..$h ];
    my $newgame = {
       move_events => [],
-      board => [],
+      board => $board,
       w => $w,
       h => $h,
    };
@@ -152,18 +156,28 @@ sub attempt_move{
          my ($redis,$game) = @_;
          $game = $json->decode($game);
          my $board = $game->{board};
+         my ($w,$h) = @$game{qw/w h/};
          my $move_attempt = $msg_data->{move_attempt};
          my $row = $move_attempt->{node}[0];
          my $col = $move_attempt->{node}[1];
-         my $collision = $board->[$row][$col];
-         if($collision){return}
-
+   
+         my $node = [$row,$col];
+         my $rulemap = basilisk::Rulemap::Rect->new(
+            h => $h, w => $w,
+         );
+         my ($newboard,$fail,$caps) =
+            $rulemap->evaluate_move($board, $node, $move_attempt->{stone});
+            #my $collision = $board->[$row][$col];
+         if($fail){return}
+         my $delta = $rulemap->delta($board, $newboard);
          $game->{board}->[$row][$col] = $move_attempt->{stone};
 
          #my $move_events = $game->{move_events};
          my $new_event = {
             node => [$row,$col],
             stone => $move_attempt->{stone},
+            delta => $delta,
+            time => time,
          };
          push @{$game->{move_events}}, $new_event;
 

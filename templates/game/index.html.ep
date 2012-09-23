@@ -6,6 +6,7 @@
    .sock-event-box{
       width: 30%;
       min-height:400px;
+      max-height:600px;
       border: 1px solid black;
       position:absolute;
       top:0; right:0;
