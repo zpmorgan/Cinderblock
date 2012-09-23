@@ -82,10 +82,22 @@ Game.prototype.drawLines = function(){
 }
 
 Game.prototype.handleMoveEvent = function(move_data){
+   var game = this;
    this.move_events.push(move_data);
    var move_node = move_data.node;
-   this.dropStone(move_data.stone, move_node);
-   this.setActualBoardNode(move_node, move_data.stone);
+   var removes = move_data.delta.remove;
+   var adds = move_data.delta.add;
+   $.each(removes, function(){
+      var node = this[1];
+      game.clearNode(node);
+      game.clearActualBoardNode(node);
+   });
+   $.each(adds, function(){
+      var node = this[1];
+      var stone = this[0];
+      game.dropStone(stone, node);
+      game.setActualBoardNode(node, stone);
+   });
 }
 Game.prototype.dropStone = function(stone, node){
    if (this.shadow_node)
@@ -100,8 +112,11 @@ Game.prototype.dropStone = function(stone, node){
 
 // clear shadow stone. replace with empty board section.
 Game.prototype.eraseShadowStone = function(){
+   this.clearNode(this.shadow_node);
+}
+Game.prototype.clearNode = function(node){
    var ctx = this.canvas.getContext('2d');
-   var point = this.nodeToPoint(this.shadow_node);
+   var point = this.nodeToPoint(node);
    var x = point[0] - this.node_w/2;
    var y = point[1] - this.node_h/2;
    ctx.putImageData(this.empty_board_image_data, 
@@ -228,10 +243,12 @@ Game.prototype.log = function(m){
    $('.sock-event-box').prepend(m + '<br />');
 }
 
+Game.prototype.clearActualBoardNode = function(node){
+   this.actual_board[node[0]][node[1]] = '';
+}
 Game.prototype.setActualBoardNode = function(node, stone){
-   if(this.actual_board[node[0]] == null)
-      this.actual_board[node[0]] = [];
-
+   //if(this.actual_board[node[0]] == null)
+     // this.actual_board[node[0]] = [];
    this.actual_board[node[0]][node[1]] = stone;
 }
 Game.prototype.getStoneAtActualNode = function(node){
