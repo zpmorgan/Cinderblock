@@ -172,7 +172,7 @@ sub attempt_move{
             #my $collision = $board->[$row][$col];
          if($fail){return}
          my $delta = $rulemap->delta($board, $newboard);
-         $game->{board}->[$row][$col] = $move_attempt->{stone};
+         $game->{board} = $newboard;
 
          #my $move_events = $game->{move_events};
          my $new_event = {
