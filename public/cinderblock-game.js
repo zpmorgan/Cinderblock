@@ -1,16 +1,18 @@
 
 
-function Game(){
+function Game(opts){
    this.canvas = null;
-   this.w = 19;
-   this.h = 19;
+   // rules:
+   this.w = opts.w;
+   this.h = opts.h;
+   // cached offsets for drawing:
    this.h_lines = [];
    this.v_lines = [];
 
+   // game data:
    this.move_events = [];
-
    this.actual_board = [];
-   for(i=0;i<this.w;i++)
+   for(i=0;i<this.h;i++)
       this.actual_board.push([]);
 }
 Game.prototype.setCanvas = function(cnvs){

@@ -14,13 +14,23 @@ sub sessid{
    return $sessid;
 }
 
+sub new_game_form{
+   my $self = shift;
+   $self->render(template => 'game/new_game_form');
+}
+
 sub new_game{
    my $self = shift;
+   my $w = $self->param('w') // 19;
+   my $h = $self->param('h') // 19;
+
    my $game_id = $self->redis_block(incr => 'next_game_id');
    my $sessid = $self->sessid;
    my $newgame = {
       move_events => [],
       board => [],
+      w => $w,
+      h => $h,
    };
    $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
    # assign player role to $self->session
@@ -31,11 +41,37 @@ sub new_game{
    $self->render(text => 'phoo');
 }
 
+sub be_invited{
+   my $self = shift;
+   my $code = $self->stash('invite_code');
+   my $key = "invite:$code";
+   my @res = $self->redis_block(
+      ['multi'],
+      [get => $key],
+      [del => $key],
+      ['exec']
+   );
+   my ($invite, $del) = @{$res[3]};
+   unless ($invite){
+      return $self->render_text("invite code not found or already used.")
+   }
+   $invite = $json->decode($invite);
+   my $game_id = $invite->{game_id};
+   $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
+
+   $self->redirect_to("/game/$game_id");
+   $self->render(text => '');
+}
+
 sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
-   my %roles = %{$self->redis_block('HGETALL',"gameroles:$game_id")};
+   my $roles = $self->redis_block('HGETALL',"gameroles:$game_id");
+   my %roles = $roles ? %$roles : {};
    my $sessid = $self->sessid;
+   my $game_json = $self->redis_block(GET => "game:$game_id");
+   my $game = $json->decode($game_json);
+   $self->stash(game => $game);
 
    # what part does this session play? Watcher or player?
    $self->stash(my_role => 'watcher');
@@ -44,6 +80,18 @@ sub do_game{
          $self->stash(my_role => 'player');
          $self->stash(my_color => $role_color);
          last;
+      }
+   }
+   if( keys %roles == 1 ){ #currently only one player 
+      if ($self->stash(my_role => 'player')){
+         #generate an invite code.
+         my $other_color = ($self->stash('my_color')eq'b') ?'w':'b';
+         my $invitecode = int rand(2<<30);
+         my $invite = {game_id => $game_id, color => $other_color};
+         my $timeout = 10000;
+         $self->getset_redis->setex("invite:$invitecode", $timeout
+            => $json->encode($invite));
+         $self->stash(invite_code => $invitecode);
       }
    }
    $self->render(template => 'game/index');

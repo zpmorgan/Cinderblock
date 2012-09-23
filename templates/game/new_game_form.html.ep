@@ -1,0 +1,11 @@
+% layout 'foo_layout',
+
+%= form_for '/new_game' => method => post =>  begin
+   <label for="w"> Width </label>
+   <input type="number" name="w" value="19" />
+   <br />
+   <label for="h"> Height </label>
+   <input type="number" name="h" value="19" />
+   <br />
+%= submit_button
+% end;

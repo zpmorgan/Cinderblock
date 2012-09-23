@@ -17,6 +17,12 @@
 
 <h2> Cinderblock </h2>
 <span id="state"> </span>
+% if (stash 'invite_code'){
+   <span id="invite-url"> 
+      % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
+      Invitation url: <a href="<%=$url%>"><%=$url%></a>
+   </span>
+% }
 
 <div class="sock-event-box">
       
@@ -25,9 +31,11 @@
 <canvas id="goban" width="550" height="550"></canvas>
 
 <script type="text/javascript">
+% my $game = stash 'game';
 var PORTAL_DATA = {
    game_id: <%=stash('game_id')%>,
-
+   game_w: <%=$game->{w}%>,
+   game_h: <%=$game->{h}%>,
    % if (stash('my_role') eq 'player') {
       role:  'player',
       color:  '<%=stash('my_color')%>',
@@ -38,9 +46,12 @@ var PORTAL_DATA = {
 
 var relevantGame;
 $(document).ready(function(){
-   relevantGame = new Game;
-   relevantGame.setCanvas($("canvas#goban")[0]);
-   relevantGame.draw();
+      relevantGame = new Game({
+         w: PORTAL_DATA.game_w,
+         h: PORTAL_DATA.game_h
+         });
+      relevantGame.setCanvas($("canvas#goban")[0]);
+      relevantGame.draw();
 });
 </script>
 
