@@ -134,7 +134,7 @@ Game.prototype.displayShadowStone = function(board_node){
    if(draw_new == true) {
       var point = this.nodeToPoint(board_node);
       ctx.globalAlpha = .5;
-      ctx.drawImage(this.images.w,
+      ctx.drawImage(this.images[PORTAL_DATA.color],
          point[0] - this.node_w/2, point[1]-this.node_h/2,
          this.node_w, this.node_h);
       this.shadow_node = board_node;
@@ -151,12 +151,14 @@ Game.prototype.mouseEventToRelCoords = function(e, canvas_selector){
 Game.prototype.activate = function(){
    var game = this;
    $(game.canvas).mousemove(function(e){
+      if(!game.can_move()) {return;}
       var point = game.mouseEventToRelCoords(e,this);
       var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
    });
    $(game.canvas).mousedown(function(e){
+      if(!game.can_move()) {return;}
       var point = game.mouseEventToRelCoords(e,this);
       var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
@@ -249,4 +251,9 @@ Game.prototype.attemptMove = function(node){
    this.sock.send(JSON.stringify(attempt));
 }
 
+Game.prototype.can_move = function(){
+   if(PORTAL_DATA.role == 'watcher')
+      return 0;
+   return 1;
+}
 

@@ -9,6 +9,7 @@
       border: 1px solid black;
       position:absolute;
       top:0; right:0;
+      overflow:scroll;
       /*float:right;*/
    }
 </style>
@@ -26,8 +27,13 @@
 <script type="text/javascript">
 var PORTAL_DATA = {
    game_id: <%=stash('game_id')%>,
-   role: "player",
-   color: "w",
+
+   % if (stash('my_role') eq 'player') {
+      role:  'player',
+      color:  '<%=stash('my_color')%>',
+   % } else {
+      role:  'watcher',
+   % }
 };
 
 var relevantGame;

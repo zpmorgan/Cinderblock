@@ -4,42 +4,29 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-use Mojo::Redis;
-use Protocol::Redis::XS;
-our $pub_redis = Mojo::Redis->new(timeout => 1<<29);
-our $getset_redis = Mojo::Redis->new(timeout => 1<<29);
-our $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
-{
-   no strict 'refs';
-   for my $nam (qw/block_redis pub_redis getset_redis/){
-      $$nam->on(error => sub{
-            my($redis, $error) = @_;
-            warn "[$nam REDIS ERROR] $error\n";
-         });
-   }
-}
-
-sub redis_block{ # no callbacks allowed
+sub sessid{
    my $self = shift;
-   my @results;
-   $block_redis->execute(@_, sub{
-         my $redis = shift;
-         @results = @_;
-         $redis->ioloop->stop;
-      });
-   $block_redis->ioloop->start;
-   return $results[0] unless wantarray;
-   return @results;
+   my $sessid = $self->session('session_id');
+   unless ($sessid){
+      $sessid = $self->redis_block(incr => 'next_session_id');
+      $self->session(session_id => $sessid);
+   }
+   return $sessid;
 }
 
 sub new_game{
    my $self = shift;
    my $game_id = $self->redis_block(incr => 'next_game_id');
+   my $sessid = $self->sessid;
    my $newgame = {
       move_events => [],
       board => [],
    };
-   $getset_redis->set("game:$game_id" => $json->encode($newgame));
+   $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
+   # assign player role to $self->session
+   my $color = (rand>.5) ? 'b' : 'w';
+   $self->getset_redis->hset("gameroles:$game_id", $color => $sessid);
+   
    $self->redirect_to("/game/$game_id");
    $self->render(text => 'phoo');
 }
@@ -47,6 +34,18 @@ sub new_game{
 sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
+   my %roles = %{$self->redis_block('HGETALL',"gameroles:$game_id")};
+   my $sessid = $self->sessid;
+
+   # what part does this session play? Watcher or player?
+   $self->stash(my_role => 'watcher');
+   for my $role_color(keys %roles){
+      if($roles{$role_color} == $sessid){
+         $self->stash(my_role => 'player');
+         $self->stash(my_color => $role_color);
+         last;
+      }
+   }
    $self->render(template => 'game/index');
 }
 
@@ -67,7 +66,7 @@ sub game_event_socket{
          return if $event->[0] eq 'subscribe';
          $ws->send($event->[2]);
       });
-   $getset_redis->get("game:$game_id" => sub{
+   $self->getset_redis->get("game:$game_id" => sub{
          my ($redis,$res) = @_;
          my $game = $json->decode($res);
          my $all_move_events = $game->{move_events};
@@ -77,7 +76,6 @@ sub game_event_socket{
          }
       });
    
-
    $self->on(message => sub {
          my ($ws, $msg) = @_;
          say "Message: $msg";
@@ -132,7 +130,7 @@ sub publish_move_event{
       event_type => 'move',
       move => $mov,
    };
-   $pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
+   $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
 }
 
 1;
