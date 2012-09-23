@@ -12,6 +12,7 @@ function Game(opts){
    // game data:
    this.move_events = [];
    this.actual_board = [];
+   this.actual_turn = 'b';
    for(i=0;i<this.h;i++)
       this.actual_board.push([]);
 }
@@ -98,6 +99,7 @@ Game.prototype.handleMoveEvent = function(move_data){
       game.dropStone(stone, node);
       game.setActualBoardNode(node, stone);
    });
+   game.actual_turn = move_data.turn_after;
 }
 Game.prototype.dropStone = function(stone, node){
    if (this.shadow_node)
@@ -272,6 +274,8 @@ Game.prototype.attemptMove = function(node){
 
 Game.prototype.can_move = function(){
    if(PORTAL_DATA.role == 'watcher')
+      return 0;
+   if (this.actual_turn != PORTAL_DATA.color)
       return 0;
    return 1;
 }

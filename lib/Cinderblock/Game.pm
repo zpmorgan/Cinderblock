@@ -37,6 +37,7 @@ sub new_game{
       board => $board,
       w => $w,
       h => $h,
+      turn => 'b',
    };
    $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
    # assign player role to $self->session
@@ -157,9 +158,12 @@ sub attempt_move{
    $redis1->get ("game:$game_id" => sub{
          my ($redis,$game) = @_;
          $game = $json->decode($game);
+         my $turn = $game->{turn};
          my $board = $game->{board};
          my ($w,$h) = @$game{qw/w h/};
          my $move_attempt = $msg_data->{move_attempt};
+         my $stone = $move_attempt->{stone};
+         unless ($stone eq $turn) {return}
          my $row = $move_attempt->{node}[0];
          my $col = $move_attempt->{node}[1];
    
@@ -168,18 +172,20 @@ sub attempt_move{
             h => $h, w => $w,
          );
          my ($newboard,$fail,$caps) =
-            $rulemap->evaluate_move($board, $node, $move_attempt->{stone});
+            $rulemap->evaluate_move($board, $node, $stone);
             #my $collision = $board->[$row][$col];
          if($fail){return}
          my $delta = $rulemap->delta($board, $newboard);
          $game->{board} = $newboard;
+         $game->{turn} = ($stone eq 'w') ? 'b' : 'w';
 
          #my $move_events = $game->{move_events};
          my $new_event = {
             node => [$row,$col],
-            stone => $move_attempt->{stone},
+            stone => $stone,
             delta => $delta,
             time => time,
+            turn_after => $game->{turn},
          };
          push @{$game->{move_events}}, $new_event;
 
