@@ -26,6 +26,8 @@ sub new_game{
    my $self = shift;
    my $w = $self->param('w') // 19;
    my $h = $self->param('h') // 19;
+   die if $w<1 or $w>30;
+   die if $h<1 or $h>30;
 
    my $game_id = $self->redis_block(incr => 'next_game_id');
    my $sessid = $self->sessid;

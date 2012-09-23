@@ -267,7 +267,6 @@ Game.prototype.attemptMove = function(node){
          "stone": PORTAL_DATA.color,
       }
    };
-   alert(this.sock);
    this.sock.send(JSON.stringify(attempt));
 }
 
