@@ -33,8 +33,12 @@
 
 <script type="text/javascript">
 % my $game = stash 'game';
+//   ws://127.0.0.1:3000/game/
+% my $ws_url = $self->req->url->base .'/'. stash('game_id') . '/sock';
+% $ws_url =~ s/^http/ws/;
 var PORTAL_DATA = {
    game_id: <%=stash('game_id')%>,
+   ws_url: "<%= $ws_url %>",
    game_w: <%=$game->{w}%>,
    game_h: <%=$game->{h}%>,
    % if (stash('my_role') eq 'player') {

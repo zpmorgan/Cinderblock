@@ -219,8 +219,8 @@ Game.prototype.canvasXYToNode = function(x,y){
 
 Game.prototype.openSocket = function(){
    var game = this;
-   
-   conn = new WebSocket('ws://127.0.0.1:3000/game/'+  PORTAL_DATA.game_id  +'/sock');
+//   ws://127.0.0.1:3000/game/
+   conn = new WebSocket(PORTAL_DATA.ws_url);
    this.sock = conn;
 
    conn.onmessage = function  (event) {
@@ -267,6 +267,7 @@ Game.prototype.attemptMove = function(node){
          "stone": PORTAL_DATA.color,
       }
    };
+   alert(this.sock);
    this.sock.send(JSON.stringify(attempt));
 }
 
