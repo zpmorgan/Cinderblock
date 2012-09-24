@@ -23,6 +23,7 @@
       % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
       Invitation url: <a href="<%=$url%>"><%=$url%></a>
    </span>
+   <br />
 % }
 
 <div class="sock-event-box">
