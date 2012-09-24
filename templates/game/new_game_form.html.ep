@@ -7,5 +7,11 @@
    <label for="h"> Height </label>
    <input type="number" name="h" value="19" />
    <br />
+   <label for="wrap_v"> wrap vertical </label>
+   %= check_box wrap_v=> 1
+   <br />
+   <label for="wrap_h"> wrap horizonta l</label>
+   %= check_box wrap_h => 1
+   <br />
 %= submit_button
 % end;

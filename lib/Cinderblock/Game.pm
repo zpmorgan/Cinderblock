@@ -28,6 +28,8 @@ sub new_game{
    my $h = $self->param('h') // 19;
    die if $w<2 or $w>30;
    die if $h<2 or $h>30;
+   my $wrap_v = $self->param('wrap_v') ? 1 : 0;
+   my $wrap_h = $self->param('wrap_h') ? 1 : 0;
 
    my $game_id = $self->redis_block(incr => 'next_game_id');
    my $sessid = $self->sessid;
@@ -37,6 +39,8 @@ sub new_game{
       board => $board,
       w => $w,
       h => $h,
+      wrap_v => $wrap_v,
+      wrap_h => $wrap_h,
       turn => 'b',
    };
    $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
@@ -170,6 +174,8 @@ sub attempt_move{
          my $node = [$row,$col];
          my $rulemap = basilisk::Rulemap::Rect->new(
             h => $h, w => $w,
+            wrap_v => $game->{wrap_v},
+            wrap_h => $game->{wrap_h},
          );
          my ($newboard,$fail,$caps) =
             $rulemap->evaluate_move($board, $node, $stone);

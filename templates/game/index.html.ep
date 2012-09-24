@@ -32,25 +32,29 @@
 </script>
 
 
+<div class="wrapperblock">
+<div class="cinderblock">
+   <div class="leftoblock">
+      <h2> Cinderblock </h2>
+      <span id="state"> </span>
+      % if (stash 'invite_code'){
+         <span id="invite-url"> 
+            % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
+            Invitation url: <a href="<%=$url%>"><%=$url%></a>
+         </span>
+         <br />
+      % }
+   </div>
+   <div class="middoblock">
+      <canvas id="goban" width="550" height="550"></canvas>
+   </div>
 
-
-<h2> Cinderblock </h2>
-<span id="state"> </span>
-% if (stash 'invite_code'){
-   <span id="invite-url"> 
-      % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
-      Invitation url: <a href="<%=$url%>"><%=$url%></a>
-   </span>
-   <br />
-% }
-
-<div class="sock-event-box">
-      
+   <div class="rightoblock">
+      <div class="sock-event-box">
+      </div>
+   </div>
+</div>
 </div>
 
-<canvas id="goban" width="550" height="550"></canvas>
-<div style="display:none;">
-%# <img src="/light_coloured_wood_200142.JPG" id="wood-bg" >
-</div>
 
 </body></html>
