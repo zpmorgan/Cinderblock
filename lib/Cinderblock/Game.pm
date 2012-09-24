@@ -26,8 +26,8 @@ sub new_game{
    my $self = shift;
    my $w = $self->param('w') // 19;
    my $h = $self->param('h') // 19;
-   die if $w<1 or $w>30;
-   die if $h<1 or $h>30;
+   die if $w<2 or $w>30;
+   die if $h<2 or $h>30;
 
    my $game_id = $self->redis_block(incr => 'next_game_id');
    my $sessid = $self->sessid;
@@ -90,7 +90,7 @@ sub do_game{
       }
    }
    if( keys %roles == 1 ){ #currently only one player 
-      if ($self->stash(my_role => 'player')){
+      if ($self->stash('my_role') eq 'player'){
          #generate an invite code.
          my $other_color = ($self->stash('my_color')eq'b') ?'w':'b';
          my $invitecode = int rand(2<<30);
