@@ -28,6 +28,7 @@ sub startup {
    my $redis; 
    $self->helper (block_redis => sub{
          die unless $block_redis;
+         srand(time ^ ($$ << 7));
          return $block_redis 
       });
    $self->helper (redis_block => sub{
