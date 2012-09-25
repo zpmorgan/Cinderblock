@@ -11,6 +11,9 @@ function Game(opts){
    // rules:
    this.w = opts.w;
    this.h = opts.h;
+   this.wrap_v = opts.wrap_v;
+   this.wrap_h = opts.wrap_h;
+
    // cached offsets for drawing:
    this.h_lines = [];
    this.v_lines = [];
@@ -23,6 +26,7 @@ function Game(opts){
       this.actual_board.push([]);
 }
 Game.prototype.setCanvas = function(cnvs){
+   var game = this;
    this.finalCanvas = cnvs;
    this.determineCanvasDims();
    cnvs.width = this.calc_canvas_w;
@@ -39,6 +43,49 @@ Game.prototype.setCanvas = function(cnvs){
    this.intermediateCanvas = $('<canvas />')[0];
    this.intermediateCanvas.width = cnvs.width;
    this.intermediateCanvas.height = cnvs.height;
+
+   // mouse handler..
+   $(game.finalCanvas).mousedown(function(e_down){
+      // left mouse button == Move!
+      if(e_down.which == 1){
+         if(!game.can_move()) {return;}
+         var point = game.mouseEventToRelCoords(e_down,this);
+         var boardnode = game.canvasXYToNode(point[0],point[1]);
+         if(!boardnode){ return;}
+         game.attemptMove(boardnode);
+      }
+      // right mouse button == drag!
+      if(e_down.which == 3){
+         e_down.preventDefault(); //no menu.
+         //if(this.wrap_v || this.wrap_h){
+         game.grabx = e_down.pageX;
+         game.graby = e_down.pageY;
+         game.in_grab = true;
+         $(document).mousemove(function(e_move){
+            game.movex = e_move.pageX;
+            game.movey = e_move.pageY;
+            game.redrawFinalWithOffset();
+         });
+         $(document).mouseup(function(e_move){
+            game.in_grab = false;
+            $(document).unbind('mouseup');
+            $(document).unbind('mousemove');
+            var dispx = game.movex - game.grabx;
+            var dispy = game.movey - game.graby;
+            game.log('DRAGGED X '+dispx);
+            game.log('DRAGGED Y '+dispy);
+            game.graby = game.grabx = 0;
+            game.movey = game.movex = 0;
+            game.offset_x += dispx;
+            game.offset_y += dispy;
+            game.redrawFinalWithOffset();
+         });
+      }
+   });
+
+   $(game.finalCanvas).bind('contextmenu',function(e){e.preventDefault();return false});
+
+   //}
 }
 
 // guess board canvas dims from window dims.
@@ -165,6 +212,24 @@ Game.prototype.redrawNodeOnFinal = function(node){
          this.node_w, this.node_h);
 
 }
+Game.prototype.redrawFinalWithOffset = function(){
+   var fctx = this.finalCanvas.getContext('2d');
+   var offset_x = this.offset_x;
+   var offset_y = this.offset_y;
+   if(this.in_grab){
+      var dispx = this.movex - this.grabx;
+      var dispy = this.movey - this.graby;
+      offset_x += dispx;
+      offset_y += dispy;
+   }
+   fctx.drawImage(this.intermediateCanvas,
+         0,0,
+         this.finalCanvas.width,this.finalCanvas.height,
+         offset_x, offset_y,
+         this.finalCanvas.width,this.finalCanvas.height);
+
+}
+
 
 // clear shadow stone. replace with empty board section.
 Game.prototype.eraseShadowStone = function(){
@@ -231,13 +296,6 @@ Game.prototype.activate = function(){
       var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
-   });
-   $(game.finalCanvas).mousedown(function(e){
-      if(!game.can_move()) {return;}
-      var point = game.mouseEventToRelCoords(e,this);
-      var boardnode = game.canvasXYToNode(point[0],point[1]);
-      if(!boardnode){ return;}
-      game.attemptMove(boardnode);
    });
    this.openSocket();
 }
