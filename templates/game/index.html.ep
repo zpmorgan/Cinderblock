@@ -42,7 +42,9 @@
       % if (stash 'invite_code'){
          <span id="invite-url"> 
             % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
-            Invitation url: <a href="<%=$url%>"><%=$url%></a>
+            Invitation url: 
+            <input type="text" spellcheck="false"  readonly="readonly" onclick="this.select()"
+                value="<%=$url%>">
          </span>
          <br />
       % }
