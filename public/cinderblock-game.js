@@ -27,6 +27,9 @@ Game.prototype.setCanvas = function(cnvs){
    this.node_h = this.grid_h / (this.h-1);
 }
 
+Game.prototype.determineCanvasDims = function(){
+}
+
 Game.prototype.draw = function(){
    if(!this.canvas){
       alert('no canvas! ' + this.canvas);

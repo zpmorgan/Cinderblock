@@ -27,6 +27,7 @@
             h: PORTAL_DATA.game_h
             });
          relevantGame.setCanvas($("canvas#goban")[0]);
+         relevantGame.determineCanvasDims();
          relevantGame.draw();
    });
 </script>

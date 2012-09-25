@@ -46,10 +46,26 @@ sub new_game{
    $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
    # assign player role to $self->session
    my $color = (rand>.5) ? 'b' : 'w';
-   $self->getset_redis->hset("gameroles:$game_id", $color => $sessid);
+   $self->set_game_player(game_id => $game_id, color => $color, sessid => $sessid);
    
    $self->redirect_to("/game/$game_id");
    $self->render(text => 'phoo');
+}
+
+# get or set $role
+sub set_game_player{
+   my $self = shift;
+   my %opts = @_;
+   my $sessid = $opts{sessid} // $self->sessid;
+   my $gameid = $opts{game_id} // $self->stash('game_id');
+   die unless $opts{color} =~ /^(b|w)$/;
+   $self->redis_block(HSET => "gameroles:$gameid", $opts{color} => $sessid);
+}
+sub players_in_game{
+   my $self = shift;
+   my $game_id = shift;
+   my $roles = $self->redis_block('HGETALL',"gameroles:$game_id");
+   return $roles // {};
 }
 
 sub be_invited{
@@ -77,8 +93,9 @@ sub be_invited{
 sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
-   my $roles = $self->redis_block('HGETALL',"gameroles:$game_id");
-   my %roles = $roles ? %$roles : {};
+   my $roles = $self->players_in_game($game_id);
+   die $roles unless ref($roles) eq 'HASH';
+   my %roles = %$roles;
    my $sessid = $self->sessid;
    my $game_json = $self->redis_block(GET => "game:$game_id");
    my $game = $json->decode($game_json);
@@ -93,7 +110,7 @@ sub do_game{
          last;
       }
    }
-   if( keys %roles == 1 ){ #currently only one player 
+   if( keys %roles == 1 ){ #currently only one player ?
       if ($self->stash('my_role') eq 'player'){
          #generate an invite code.
          my $other_color = ($self->stash('my_color')eq'b') ?'w':'b';
@@ -116,6 +133,11 @@ sub game_event_socket{
    my $ws = $self->tx;
    
    my $sub_redis = Mojo::Redis->new(timeout => 20000);
+   $sub_redis->timeout(20000);
+   $sub_redis->on(error => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS ERROR] $error\n";
+      });
    $sub_redis->protocol_redis("Protocol::Redis::XS");
    $sub_redis->timeout(180);
    $self->stash(sub_redis => $sub_redis);

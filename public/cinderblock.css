@@ -1,13 +1,14 @@
 
 div.wrapperblock{
    margin: 0 auto;
-   min-width: 50%;
-   max-width: 80%;
+   min-width: 950px;
+   max-width: 85%;
 }
 div.cinderblock{
    width: 100%;
    display: table;
    table-layout: fixed;
+   margin: 8px;
 }
 div.leftoblock{
    display: table-cell;
@@ -20,14 +21,13 @@ div.middoblock{
    display: table-cell;
    width: 60%;
    padding: 8px;
-   background: DarkGreen;
    vertical-align:middle;
    text-align:center;
 }
 div.rightoblock{
    display: table-cell;
    width: 20%;
-   background: DarkBlue;
+   background: DarkGreen;
    vertical-align:top;
 }
 
@@ -47,5 +47,16 @@ div.rightoblock{
 html, body {
    height: 100%;
    width: 100%;
-   background: DarkGreen;
+   margin:0;
+}
+
+body{
+   background: #171a33; /* Old browsers */
+   background: -moz-linear-gradient(left, #171a33 0%, #000000 28%, #000000 58%, #253a1f 100%); /* FF3.6+ */
+   background: -webkit-gradient(linear, left top, right top, color-stop(0%,#171a33), color-stop(28%,#000000), color-stop(58%,#000000), color-stop(100%,#253a1f)); /* Chrome,Safari4+ */
+   background: -webkit-linear-gradient(left, #171a33 0%,#000000 28%,#000000 58%,#253a1f 100%); /* Chrome10+,Safari5.1+ */
+   background: -o-linear-gradient(left, #171a33 0%,#000000 28%,#000000 58%,#253a1f 100%); /* Opera 11.10+ */
+   background: -ms-linear-gradient(left, #171a33 0%,#000000 28%,#000000 58%,#253a1f 100%); /* IE10+ */
+   background: linear-gradient(to right, #171a33 0%,#000000 28%,#000000 58%,#253a1f 100%); /* W3C */
+   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#171a33', endColorstr='#253a1f',GradientType=1 ); /* IE6-9 */
 }
