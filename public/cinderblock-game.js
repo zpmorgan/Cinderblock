@@ -23,18 +23,22 @@ function Game(opts){
       this.actual_board.push([]);
 }
 Game.prototype.setCanvas = function(cnvs){
-   this.canvas = cnvs;
+   this.finalCanvas = cnvs;
    this.determineCanvasDims();
    cnvs.width = this.calc_canvas_w;
    cnvs.height = this.calc_canvas_h;
    $('div.middoblock').width ( Math.floor(this.calc_canvas_w) );
    var margin = this.margin = this.calc_stone_size / 2;
+// TODO: kill grid_box
    var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
    this.grid_box = grid_box;
    this.grid_w = grid_box[2] - grid_box[0];
    this.grid_h = grid_box[3] - grid_box[1];
    this.node_w = this.grid_w / (this.w-1);
    this.node_h = this.grid_h / (this.h-1);
+   this.intermediateCanvas = $('<canvas />')[0];
+   this.intermediateCanvas.width = cnvs.width;
+   this.intermediateCanvas.height = cnvs.height;
 }
 
 // guess board canvas dims from window dims.
@@ -46,6 +50,10 @@ Game.prototype.determineCanvasDims = function(){
    avail_w -= $('div.leftoblock').width();
    avail_w -= $('div.rightoblock').width();
    var avail_h = win_h - 20;
+   if(avail_w < 350)
+      avail_w = 350;
+   if(avail_h < 350)
+      avail_h = 350;
    var max_stone_size_x = avail_w / this.w;
    var max_stone_size_y = avail_h / this.h;
    var stone_size;
@@ -54,17 +62,18 @@ Game.prototype.determineCanvasDims = function(){
    } else {
       this.calc_stone_size = max_stone_size_x;
    }
-   this.calc_canvas_w = this.calc_stone_size * this.w;
-   this.calc_canvas_h = this.calc_stone_size * this.h;
+   this.calc_stone_size = Math.floor(this.calc_stone_size);
+   this.calc_canvas_w  =  Math.floor(this.calc_stone_size * this.w);
+   this.calc_canvas_h =   Math.floor(this.calc_stone_size * this.h);
 }
 
 Game.prototype.draw = function(){
-   if(!this.canvas){
+   if(!this.intermediateCanvas){
       alert('no canvas! ' + this.canvas);
       return;
    }
    var game = this;
-   var ctx = game.canvas.getContext('2d');
+   var ctx = game.intermediateCanvas.getContext('2d');
    ctx.fillStyle = 'red';
    //var bg = $("#wood-bg")[0];
    this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142.JPG"};
@@ -84,7 +93,8 @@ Game.prototype.draw = function(){
 
 Game.prototype.drawLines = function(){
    var game = this;
-   var ctx = game.canvas.getContext('2d');
+   var ctx = game.intermediateCanvas.getContext('2d');
+   var fctx = game.finalCanvas.getContext('2d');
    var margin = this.margin;
    var grid_box = this.grid_box;
    //vertical lines
@@ -110,6 +120,7 @@ Game.prototype.drawLines = function(){
    //copy empty board to paste over removed stuff.
    this.empty_board_image_data = 
       ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+   fctx.drawImage(this.intermediateCanvas,0,0); 
    this.activate();
 }
 
@@ -135,29 +146,42 @@ Game.prototype.handleMoveEvent = function(move_data){
 Game.prototype.dropStone = function(stone, node){
    if (this.shadow_node)
       this.eraseShadowStone();
-   var ctx = this.canvas.getContext('2d');
+   var ictx = this.intermediateCanvas.getContext('2d');
+   var fctx = this.finalCanvas.getContext('2d');
    var point = this.nodeToPoint(node);
    var stone_img = this.images[stone];
-   ctx.drawImage(stone_img,
+   ictx.drawImage(stone_img,
          point[0] - this.node_w/2, point[1]-this.node_h/2,
          this.node_w, this.node_h);
+   this.redrawNodeOnFinal(node);
+}
+Game.prototype.redrawNodeOnFinal = function(node){
+   var point = this.nodeToPoint(node);
+   var fctx = this.finalCanvas.getContext('2d');
+   fctx.drawImage(this.intermediateCanvas,
+         point[0] - this.node_w/2, point[1]-this.node_h/2,
+         this.node_w, this.node_h,
+         point[0] - this.node_w/2, point[1]-this.node_h/2,
+         this.node_w, this.node_h);
+
 }
 
 // clear shadow stone. replace with empty board section.
 Game.prototype.eraseShadowStone = function(){
    this.clearNode(this.shadow_node);
+   this.shadow_node = null;
 }
 Game.prototype.clearNode = function(node){
-   var ctx = this.canvas.getContext('2d');
+   var ctx = this.intermediateCanvas.getContext('2d');
    var point = this.nodeToPoint(node);
    var x = point[0] - this.node_w/2;
    var y = point[1] - this.node_h/2;
    ctx.putImageData(this.empty_board_image_data, 
          0,0,x,y, this.node_w, this.node_h);
-   this.shadow_node = null;
+   this.redrawNodeOnFinal(node);
 }
 Game.prototype.displayShadowStone = function(board_node){
-   var ctx = this.canvas.getContext('2d');
+   var ctx = this.intermediateCanvas.getContext('2d');
 
    var rm_old = false;
    var draw_new = false;
@@ -189,6 +213,7 @@ Game.prototype.displayShadowStone = function(board_node){
          this.node_w, this.node_h);
       this.shadow_node = board_node;
       ctx.globalAlpha = 1;
+      this.redrawNodeOnFinal(board_node);
    }
 }
 
@@ -200,14 +225,14 @@ Game.prototype.mouseEventToRelCoords = function(e, canvas_selector){
 
 Game.prototype.activate = function(){
    var game = this;
-   $(game.canvas).mousemove(function(e){
+   $(game.finalCanvas).mousemove(function(e){
       if(!game.can_move()) {return;}
       var point = game.mouseEventToRelCoords(e,this);
       var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
    });
-   $(game.canvas).mousedown(function(e){
+   $(game.finalCanvas).mousedown(function(e){
       if(!game.can_move()) {return;}
       var point = game.mouseEventToRelCoords(e,this);
       var boardnode = game.canvasXYToNode(point[0],point[1]);
