@@ -138,7 +138,7 @@ sub game_event_socket{
          my($redis, $error) = @_;
          warn "[sub_REDIS ERROR] $error\n";
       });
-   $sub_redis->protocol_redis("Protocol::Redis::XS");
+   #$sub_redis->protocol_redis("Protocol::Redis::XS");
    $sub_redis->timeout(180);
    $self->stash(sub_redis => $sub_redis);
    # push game events when they come down the tube.

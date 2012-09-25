@@ -2,7 +2,7 @@ package Cinderblock;
 use Mojo::Base 'Mojolicious';
 
 use Mojo::Redis;
-use Protocol::Redis::XS;
+#use Protocol::Redis::XS;
 our $pub_redis = Mojo::Redis->new();
 $pub_redis->timeout(1<<29);
 our $getset_redis = Mojo::Redis->new();
