@@ -21,6 +21,7 @@ Game.prototype.setCanvas = function(cnvs){
    this.determineCanvasDims();
    cnvs.width = this.calc_canvas_w;
    cnvs.height = this.calc_canvas_h;
+   $('div.middoblock').width ( Math.floor(this.calc_canvas_w) );
    var margin = this.margin = this.calc_stone_size / 2;
    var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
    this.grid_box = grid_box;

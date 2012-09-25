@@ -1,7 +1,16 @@
+.colors-light-on-dark {
+   color: #cccccc;
+   background: #113322;
+}
+.middoform{
+   display: inline-block;
+}
+
 
 div.wrapperblock{
    margin: 0 auto;
-   min-width: 950px;
+   text-align: center;
+   min-width: 250px;
    max-width: 95%;
 }
 div.cinderblock{
@@ -10,9 +19,12 @@ div.cinderblock{
    table-layout: fixed;
    margin: 8px;
 }
+div.fooblock{
+   display: table-cell;
+}
 div.leftoblock{
    display: table-cell;
-   width: 20%;
+   width: 160px;
    background: DarkGrey;
    text-align:center;
    vertical-align:top;
@@ -26,7 +38,7 @@ div.middoblock{
 }
 div.rightoblock{
    display: table-cell;
-   width: 20%;
+   width: 240px;
    background: DarkGreen;
    vertical-align:top;
 }

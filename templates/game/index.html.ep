@@ -35,6 +35,7 @@
 
 <div class="wrapperblock">
 <div class="cinderblock">
+   <div class="fooblock"> </div>
    <div class="leftoblock">
       <h2> Cinderblock </h2>
       <span id="state"> </span>
@@ -54,6 +55,7 @@
       <div class="sock-event-box">
       </div>
    </div>
+   <div class="fooblock"> </div>
 </div>
 </div>
 
