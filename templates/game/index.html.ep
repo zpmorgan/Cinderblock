@@ -12,6 +12,8 @@
       ws_url: "<%= $ws_url %>",
       game_w: <%=$game->{w}%>,
       game_h: <%=$game->{h}%>,
+      game_wrap_v: <%=$game->{wrap_v} ? 1 : 0%>,
+      game_wrap_h: <%=$game->{wrap_h} ? 1 : 0%>,
       % if (stash('my_role') eq 'player') {
          role:  'player',
          color:  '<%=stash('my_color')%>',
@@ -24,10 +26,11 @@
    $(document).ready(function(){
          relevantGame = new Game({
             w: PORTAL_DATA.game_w,
-            h: PORTAL_DATA.game_h
+            h: PORTAL_DATA.game_h,
+            wrap_v: PORTAL_DATA.game_wrap_v,
+            wrap_h: PORTAL_DATA.game_wrap_h,
             });
          relevantGame.setCanvas($("canvas#goban")[0]);
-//         relevantGame.determineCanvasDims();
          relevantGame.draw();
    });
 </script>

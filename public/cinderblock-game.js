@@ -1,7 +1,13 @@
 
 
 function Game(opts){
-   this.canvas = null;
+
+   // only board, no stones, imagedata is not a canvas
+   this.empty_board_image_data = null;
+   // only stones: 
+   this.intermediateCanvas = null;
+   // marked & scrolled.
+   this.finalCanvas = null;
    // rules:
    this.w = opts.w;
    this.h = opts.h;
@@ -79,7 +85,7 @@ Game.prototype.draw = function(){
 Game.prototype.drawLines = function(){
    var game = this;
    var ctx = game.canvas.getContext('2d');
-   var margin = this.margin = 24;
+   var margin = this.margin;
    var grid_box = this.grid_box;
    //vertical lines
    for(i=0;i<this.w;i++){
