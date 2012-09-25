@@ -18,7 +18,10 @@ function Game(opts){
 }
 Game.prototype.setCanvas = function(cnvs){
    this.canvas = cnvs;
-   var margin = this.margin = 24;
+   this.determineCanvasDims();
+   cnvs.width = this.calc_canvas_w;
+   cnvs.height = this.calc_canvas_h;
+   var margin = this.margin = this.calc_stone_size / 2;
    var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
    this.grid_box = grid_box;
    this.grid_w = grid_box[2] - grid_box[0];
@@ -27,7 +30,25 @@ Game.prototype.setCanvas = function(cnvs){
    this.node_h = this.grid_h / (this.h-1);
 }
 
+// guess board canvas dims from window dims.
+// should change upon resize.
 Game.prototype.determineCanvasDims = function(){
+   var win_w = $(window).width();
+   var win_h = $(window).height();
+   var avail_w = win_w *.95 - 40;
+   avail_w -= $('div.leftoblock').width();
+   avail_w -= $('div.rightoblock').width();
+   var avail_h = win_h - 20;
+   var max_stone_size_x = avail_w / this.w;
+   var max_stone_size_y = avail_h / this.h;
+   var stone_size;
+   if(max_stone_size_x > max_stone_size_y){
+      this.calc_stone_size = max_stone_size_y;
+   } else {
+      this.calc_stone_size = max_stone_size_x;
+   }
+   this.calc_canvas_w = this.calc_stone_size * this.w;
+   this.calc_canvas_h = this.calc_stone_size * this.h;
 }
 
 Game.prototype.draw = function(){
