@@ -3,9 +3,12 @@ use Mojo::Base 'Mojolicious';
 
 use Mojo::Redis;
 use Protocol::Redis::XS;
-our $pub_redis = Mojo::Redis->new(timeout => 1<<29);
-our $getset_redis = Mojo::Redis->new(timeout => 1<<29);
-our $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new, timeout => 1<<29);
+our $pub_redis = Mojo::Redis->new();
+$pub_redis->timeout(1<<29);
+our $getset_redis = Mojo::Redis->new();
+$getset_redis->timeout(1<<29);
+our $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
+$block_redis->timeout(1<<29);
 {
    no strict 'refs';
    for my $nam (qw/block_redis pub_redis getset_redis/){
