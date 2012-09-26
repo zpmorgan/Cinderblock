@@ -24,6 +24,8 @@ sub startup {
    my $self = shift;
    my $app = $self;
 
+   my $config = $self->plugin('JSONConfig');
+
    $self->secret('$spp->sessions->default_expiration(360000); #100 hours');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
