@@ -132,14 +132,18 @@ sub game_event_socket{
 #   warn("Client Connect: ".$self->tx);
    my $ws = $self->tx;
    
-   my $sub_redis = Mojo::Redis->new(timeout => 20000);
-   $sub_redis->timeout(20000);
+   my $sub_redis = Mojo::Redis->new(timeout => 2*3600);
+   $sub_redis->timeout(2*3600);
    $sub_redis->on(error => sub{
          my($redis, $error) = @_;
          warn "[sub_REDIS ERROR] $error\n";
       });
+   $sub_redis->on(close => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS] CLOSE...\n";
+      });
    #$sub_redis->protocol_redis("Protocol::Redis::XS");
-   $sub_redis->timeout(180);
+   #$sub_redis->timeout(180000);
    $self->stash(sub_redis => $sub_redis);
    # push game events when they come down the tube.
    $sub_redis->subscribe('game_events:'.$game_id => sub{

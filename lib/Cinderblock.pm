@@ -3,41 +3,52 @@ use Mojo::Base 'Mojolicious';
 
 use Mojo::Redis;
 #use Protocol::Redis::XS;
-our $pub_redis = Mojo::Redis->new();
-$pub_redis->timeout(1<<29);
-our $getset_redis = Mojo::Redis->new();
-$getset_redis->timeout(1<<29);
-our $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
-$block_redis->timeout(1<<29);
-{
-   no strict 'refs';
-   for my $nam (qw/block_redis pub_redis getset_redis/){
-      $$nam->on(error => sub{
-            my($redis, $error) = @_;
-            warn "[$nam REDIS ERROR] $error\n";
-         });
-   }
+our $pub_redis;# = Mojo::Redis->new();
+#$pub_redis->timeout(1<<29);
+our $getset_redis;# = Mojo::Redis->new();
+#$getset_redis->timeout(1<<29);
+our $block_redis;# = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
+#$block_redis->timeout(1<<29);
+
+sub mention_on_err_and_close{ 
+   my ($self,$redis, $nam) = @_;;
+   $redis->on(error => sub{
+         my($redis, $error) = @_;
+         warn "[REDIS ERROR] $error\n";
+      });
+   $redis->on(close => sub{ warn "[$nam REDIS] Close.]";});
 }
 
 # This method will run once at server start
 sub startup {
    my $self = shift;
+   my $app = $self;
 
    $self->secret('$spp->sessions->default_expiration(360000); #100 hours');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
 
+   my $seeded = 0;
+
    my $redis; 
    $self->helper (block_redis => sub{
-         die unless $block_redis;
-         srand(time ^ ($$ << 7));
+         my $self = shift;
+         unless ($seeded){
+            srand(time ^ ($$ << 7));
+            $seeded = 1;
+         }
+         return $block_redis if $block_redis;
+         $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
+         $block_redis->timeout(1<<29);
+         $app->mention_on_err_and_close($block_redis, 'block_redis');
          return $block_redis 
       });
    $self->helper (redis_block => sub{
          my $self = shift;
          my @results;
-         $block_redis->execute(@_, sub{
+         my $br = $self->block_redis;
+         $br->execute(@_, sub{
                my $redis = shift;
                @results = @_;
                $redis->ioloop->stop;
@@ -47,9 +58,17 @@ sub startup {
          return @results;
       });
    $self->helper (getset_redis => sub{
+      return $getset_redis if $getset_redis;
+      $getset_redis = Mojo::Redis->new();
+      $getset_redis->timeout(1<<29);
+      $app->mention_on_err_and_close($getset_redis, 'getset_redis');
       return $getset_redis;
    });
    $self->helper (pub_redis => sub{
+      return $pub_redis if $pub_redis;
+      $pub_redis = Mojo::Redis->new();
+      $pub_redis->timeout(1<<29);
+      $app->mention_on_err_and_close($pub_redis, 'pub_redis');
       return $pub_redis;
    });
 
