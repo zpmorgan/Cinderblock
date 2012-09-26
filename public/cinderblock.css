@@ -1,3 +1,17 @@
+div.tinyheader{
+   display:block;
+   background: #EAEAEA;
+   height: 16px;
+   text-align: center;
+   font-size: 10px;
+}
+div.tinyheadercenter{
+   display:inline-block;
+   height:100%;
+   background: #BBEEBB;
+   margin: 0 auto;
+}
+
 .colors-light-on-dark {
    color: #cccccc;
    background: #113322;
