@@ -114,7 +114,7 @@ Game.prototype.determineCanvasDims = function(){
    var avail_w = win_w *.95 - 40;
    avail_w -= $('div.leftoblock').width();
    avail_w -= $('div.rightoblock').width();
-   var avail_h = win_h - 20;
+   var avail_h = win_h - 60;
    if(avail_w < 350)
       avail_w = 350;
    if(avail_h < 350)
