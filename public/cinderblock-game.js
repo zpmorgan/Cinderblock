@@ -43,6 +43,8 @@ Game.prototype.setCanvas = function(cnvs){
    this.intermediateCanvas = $('<canvas />')[0];
    this.intermediateCanvas.width = cnvs.width;
    this.intermediateCanvas.height = cnvs.height;
+   this.offset_x = 0;
+   this.offset_y = 0;
 
    // mouse handler..
    $(game.finalCanvas).mousedown(function(e_down){
@@ -82,7 +84,6 @@ Game.prototype.setCanvas = function(cnvs){
          });
       }
    });
-
    $(game.finalCanvas).bind('contextmenu',function(e){e.preventDefault();return false});
 
    //}
@@ -144,14 +145,18 @@ Game.prototype.drawLines = function(){
    var fctx = game.finalCanvas.getContext('2d');
    var margin = this.margin;
    var grid_box = this.grid_box;
+   var topppp = this.wrap_v ? 0 : grid_box[1];
+   var bottom = this.wrap_v ? this.finalCanvas.height : grid_box[3];
+   var lefttt = this.wrap_h ? 0 : grid_box[0];
+   var rightt = this.wrap_h ? this.finalCanvas.width : grid_box[2];
    //vertical lines
    for(i=0;i<this.w;i++){
       var p = i / (this.w-1);
       var x = grid_box[0] + (p * this.grid_w)
       this.v_lines[i] = x;
       ctx.lineWidth = 1.2;
-      ctx.moveTo(x, grid_box[1]);
-      ctx.lineTo(x, grid_box[3]);
+      ctx.moveTo(x, topppp);
+      ctx.lineTo(x, bottom);
       ctx.stroke();
    }
    // h lines
@@ -160,14 +165,15 @@ Game.prototype.drawLines = function(){
       var y = grid_box[1] + (p * this.grid_h);
       this.v_lines[i] = y;
       ctx.lineWidth = 1.2;
-      ctx.moveTo(grid_box[0], y);
-      ctx.lineTo(grid_box[2], y);
+      ctx.moveTo(lefttt, y);
+      ctx.lineTo(rightt, y);
       ctx.stroke();
    }
    //copy empty board to paste over removed stuff.
    this.empty_board_image_data = 
       ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-   fctx.drawImage(this.intermediateCanvas,0,0); 
+   //fctx.drawImage(this.intermediateCanvas,0,0); 
+   game.redrawFinalWithOffset();
    this.activate();
 }
 
@@ -205,11 +211,28 @@ Game.prototype.dropStone = function(stone, node){
 Game.prototype.redrawNodeOnFinal = function(node){
    var point = this.nodeToPoint(node);
    var fctx = this.finalCanvas.getContext('2d');
-   fctx.drawImage(this.intermediateCanvas,
-         point[0] - this.node_w/2, point[1]-this.node_h/2,
-         this.node_w, this.node_h,
-         point[0] - this.node_w/2, point[1]-this.node_h/2,
-         this.node_w, this.node_h);
+   var orig_x = point[0] - this.node_w/2;
+   var orig_y = point[1] - this.node_h/2;
+   var offset_x = this.wrap_h ? this.offset_x : 0;
+   var offset_y = this.wrap_v ? this.offset_y : 0;
+
+   var cwidth = this.finalCanvas.width;
+   var cheight = this.finalCanvas.height;
+   var new_x = moddd(orig_x + offset_x, cwidth);
+   var new_y = moddd(orig_y + offset_y, cheight);
+   var virtual_nodes = [
+      [new_x, new_y],
+      [new_x, new_y - cheight],
+      [new_x - cwidth, new_y],
+      [new_x - cwidth, new_y - cheight],
+      ];
+   for(var i=0;i<4;i++){
+      fctx.drawImage(this.intermediateCanvas,
+            orig_x, orig_y,
+            this.node_w, this.node_h,
+            virtual_nodes[i][0], virtual_nodes[i][1],
+            this.node_w, this.node_h);
+   }
 
 }
 Game.prototype.redrawFinalWithOffset = function(){
@@ -222,14 +245,29 @@ Game.prototype.redrawFinalWithOffset = function(){
       offset_x += dispx;
       offset_y += dispy;
    }
-   fctx.drawImage(this.intermediateCanvas,
-         0,0,
-         this.finalCanvas.width,this.finalCanvas.height,
-         offset_x, offset_y,
-         this.finalCanvas.width,this.finalCanvas.height);
+   if(!this.wrap_v)
+      offset_y = 0;
+   if(!this.wrap_h)
+      offset_x = 0;
+   var cwidth = this.finalCanvas.width;
+   var cheight= this.finalCanvas.height;
+   var wrapping_offsets = [
+      [moddd(offset_x , cwidth), moddd(offset_y , cheight)],
+      [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)],
+      [moddd(offset_x , cwidth), moddd(offset_y , cheight)-cheight],
+      [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)-cheight]
+   ];
+   for(var i=0;i<4;i++){   
+      fctx.drawImage(this.intermediateCanvas,
+            0,0,cwidth,cheight, //src
+            wrapping_offsets[i][0], wrapping_offsets[i][1], cwidth,cheight); //dest
+   }
 
 }
 
+function moddd(i, i_max) {
+      return ((i % i_max) + i_max) % i_max;
+}
 
 // clear shadow stone. replace with empty board section.
 Game.prototype.eraseShadowStone = function(){
@@ -312,6 +350,14 @@ Game.prototype.canvasXYToNode = function(x,y){
    var row = -1, col = -1;
    var reach_x = this.node_w/2;
    var reach_y = this.node_h/2;
+   if(this.wrap_h){
+      x -= this.offset_x;
+      x=moddd(x,this.finalCanvas.width);
+   }
+   if(this.wrap_v){
+      y -= this.offset_y;
+      y=moddd(y,this.finalCanvas.height);
+   }
    for (i=0;i<this.w;i++){
       var node_x = this.grid_box[0] + i*this.node_w;
       if( (x > node_x-reach_x) && (x < node_x+reach_x)){
