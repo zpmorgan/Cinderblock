@@ -86,7 +86,24 @@ Game.prototype.setCanvas = function(cnvs){
    });
    $(game.finalCanvas).bind('contextmenu',function(e){e.preventDefault();return false});
 
-   //}
+   // keys for scrolling.
+   $(document).keydown(function(e){
+      var c = String.fromCharCode(e.which);
+      if(c == 'A' || c == 'H'){
+         game.offset_x += +20;
+      }
+      else if(c == 'D' || c == 'L'){
+         game.offset_x += -20;
+      }
+      else if(c == 'K' || c == 'W'){
+         game.offset_y += +20;
+      }
+      else if(c == 'S' || c == 'J'){
+         game.offset_y += -20;
+      }
+      else {return}
+      game.redrawFinalWithOffset();
+   });
 }
 
 // guess board canvas dims from window dims.
