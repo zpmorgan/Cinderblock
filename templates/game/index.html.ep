@@ -1,5 +1,16 @@
-% layout 'foo_layout',
 
+% stash('do_jq_ui' => 1);
+% layout 'foo_layout';
+
+<style type="text/css">
+   .ui-slider-horizontal .ui-state-default{
+      background: url(/b.png) 50% 50% repeat-x;
+      background-size: 100%;
+      border:none;
+   }
+</style>
+
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
 
 <script src="/cinderblock-game.js" type="text/javascript"></script>
 <script type="text/javascript">
@@ -36,15 +47,28 @@
          relevantGame.setCanvas($("canvas#goban")[0]);
          relevantGame.draw();
    });
+   //$(document).ready(function(){
+   //   $('#time-slider').slider();
+   $(document).ready(function(){
+      //$('#time-slider').css('height', '100em');
+      $('#time-slider').slider();
+      //$('#time-slider').attr('height', '100px');
+      });
+   //$('#time-slider').slider( {
+  // range: "min",  
+  // value: 35,  
+   //});
+
+
+    //  });
 </script>
 
-
+%# MAIN SECTION
 <div class="wrapperblock">
 <div class="cinderblock">
    <div class="fooblock"> </div>
    <div class="leftoblock">
       <h2> Cinderblock </h2>
-      <span id="state"> </span>
       % if (stash 'invite_code'){
          <span id="invite-url"> 
             % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
@@ -54,10 +78,18 @@
          </span>
          <br />
       % }
+      <div id="time-machine">
+         <span class="time-tooltip"></span>   
+         <div id="time-slider"></div>  
+         <span class="volume"></span>  
+      </div>
    </div>
+
+   %# BOARD
    <div class="middoblock">
       <canvas id="goban" width="550" height="550"></canvas>
    </div>
+
 
    <div class="rightoblock">
       <div class="sock-event-box">
@@ -66,6 +98,11 @@
    <div class="fooblock"> </div>
 </div>
 </div>
+
+
+
+<script type="text/javascript">
+</script>
 
 
 </body></html>

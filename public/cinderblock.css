@@ -70,6 +70,18 @@ div.rightoblock{
    /*float:right;*/
 }
 
+div#time-machine{
+   border: 1px solid black;
+   min-height: 80px;
+   margin: 8px;
+   padding: 10px !important;
+}
+div#time-slider{
+   border: 1px solid black;
+   min-height: 10px;
+   min-width: 10px;
+}
+
 html, body {
    height: 100%;
    width: 100%;
