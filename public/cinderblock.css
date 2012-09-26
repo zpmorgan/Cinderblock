@@ -82,6 +82,30 @@ div#time-slider{
    min-width: 10px;
 }
 
+
+div.time-controls{
+   display:table;
+   width: 100%
+}
+.tcontrol{
+   display:table-cell;
+   width: 35px;
+   height: 35px;
+   background-size: 100% !important;
+}
+#bbackb{
+   background: url(/127162-simple-black-square-icon-media-a-media23-arrows-seek-back.png) 50% 50% repeat-x;
+}
+#backb{
+   background: url(/127160-simple-black-square-icon-media-a-media21-arrow-back.png) 50% 50% repeat-x;
+}
+#forwb{
+   background: url(/127161-simple-black-square-icon-media-a-media22-arrow-forward1.png) 50% 50% repeat-x;
+}
+#fforwb{
+   background: url(/127163-simple-black-square-icon-media-a-media24-arrows-seek-forward.png) 50% 50% repeat-x;
+}
+
 html, body {
    height: 100%;
    width: 100%;

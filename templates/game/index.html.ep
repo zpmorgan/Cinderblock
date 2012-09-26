@@ -79,9 +79,16 @@
          <br />
       % }
       <div id="time-machine">
-         <span class="time-tooltip"></span>   
-         <div id="time-slider"></div>  
-         <span class="volume"></span>  
+         <span id="time-machine-move-num"> 0 / 0 </span>
+         <span class="time-tooltip"></span>
+         <div id="time-slider"></div>
+         <span class="volume"></span>
+         <div id="time-controls">
+            <div class="tcontrol" id="bbackb"> </div>
+            <div class="tcontrol" id="backb"> </div>
+            <div class="tcontrol" id="forwb"> </div>
+            <div class="tcontrol" id="fforwb"> </div>
+         </div>
       </div>
    </div>
 
