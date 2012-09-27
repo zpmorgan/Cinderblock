@@ -3,10 +3,11 @@ function GridBoard(w,h){
    this.w = w;
    this.h = h;
    this.data = [];
-
    for(i=0;i<this.h;i++){
       this.data.push([]);
    }
+   this.shadow_decor = null;
+   this.lastmove_decor = null;
 }
 
 GridBoard.prototype.getStoneAtNode = function(node){
@@ -60,6 +61,8 @@ function Game(opts){
 
    this.virtual_board = new GridBoard(this.w, this.h);
    this.virtualMoveNum = 0;
+   this.onVirtualMoveChange = function(arg){};
+   this.onTotalMovesChange = function(arg){};
 }
 
 Game.prototype.log = function(m){
@@ -276,8 +279,9 @@ Game.prototype.handleMoveEvent = function(move_data){
       $( "#time-slider" ).slider( "option", "value", this.move_events.length );
       this.applyDeltaToCanvas(move_data.delta);
       this.virtualMoveNum ++;
+      this.onVirtualMoveChange(this.virtualMoveNum);
    }
-//   else { alert( virtual_move_num + ',' + th) }
+   this.onTotalMovesChange (this.move_events.length);
 }
 
 Game.prototype.dropStone = function(stone, node){
@@ -524,6 +528,7 @@ Game.prototype.virtuallyGoToMove = function(destMoveNum){
          //this.log (this.virtualMoveNum+1);
          //this.log (this.virtualMoveNum);
       }
+      this.onVirtualMoveChange(this.virtualMoveNum);
       return;
    }
    // go backwards in time
@@ -541,6 +546,31 @@ Game.prototype.virtuallyGoToMove = function(destMoveNum){
          this.applyDeltaToCanvas(reversed_delta);
          this.virtualMoveNum--;
       }
+      this.onVirtualMoveChange(this.virtualMoveNum);
       return;
    }
 }
+Game.prototype.virtuallyGoToStart = function(){
+   this.virtuallyGoToMove(0);
+};
+Game.prototype.virtuallyGoToEnd= function(){
+   this.virtuallyGoToMove(this.move_events.length);
+};
+Game.prototype.virtuallyGoBackwards = function(){
+   if(this.virtualMoveNum == 0)
+      return;
+   this.virtuallyGoToMove(this.virtualMoveNum-1);
+};
+Game.prototype.virtuallyGoForwards = function(){
+   if(this.virtualMoveNum == this.move_events.length)
+      return;
+   this.virtuallyGoToMove(this.virtualMoveNum+1);
+};
+Game.prototype.setOnVirtualMoveChange = function(cb){
+   this.onVirtualMoveChange = cb;
+};
+Game.prototype.setOnTotalMovesChange = function(cb){
+   this.onTotalMovesChange = cb;
+}
+
+

@@ -58,6 +58,31 @@
             relevantGame.virtuallyGoToMove(slider_val);
             relevantGame.log(slider_val);
          });
+         // move slider when time travelling.
+         relevantGame.setOnVirtualMoveChange(function(move_num){
+            $('#time-slider').slider("option", "value", move_num);
+            $("#time-machine-move-num").text(move_num);
+            $(".ui-slider-horizontal .ui-state-default").css(
+               'background-image', move_num % 2 ? 'url(/b.png)' : 'url(/w.png)');
+            });
+         relevantGame.setOnTotalMovesChange(function(total_moves){
+            //$('#time-slider').slider("option", "value", move_num);
+            $("#time-machine-total-moves").text(total_moves);
+            });
+      });
+   $(document).ready(function(){
+         $("#bbackb").click(function(){
+            relevantGame.virtuallyGoToStart();
+            });
+         $("#backb").click(function(){
+            relevantGame.virtuallyGoBackwards();
+            });
+         $("#forwb").click(function(){
+            relevantGame.virtuallyGoForwards();
+            });
+         $("#fforwb").click(function(){
+            relevantGame.virtuallyGoToEnd();
+            });
       });
 
 </script>
@@ -78,7 +103,7 @@
          <br />
       % }
       <div id="time-machine">
-         <span id="time-machine-move-num"> 0 / 0 </span>
+         <span id="time-machine-move-num"> 0 </span> /<span id="time-machine-total-moves"> 0 </span>
          <span class="time-tooltip"></span>
          <div id="time-slider"></div>
          <span class="volume"></span>
