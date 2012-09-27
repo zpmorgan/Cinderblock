@@ -122,3 +122,8 @@ body{
    background: linear-gradient(to right, #171a33 0%,#000000 28%,#000000 58%,#253a1f 100%); /* W3C */
    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#171a33', endColorstr='#253a1f',GradientType=1 ); /* IE6-9 */
 }
+.sorta-hidden{
+   position: absolute !important;
+   top: -9999px !important;
+   left: -9999px !important;
+}

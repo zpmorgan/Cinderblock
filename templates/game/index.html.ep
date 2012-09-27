@@ -12,9 +12,9 @@
 </style>
 
 <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.23/jquery-ui.min.js"></script>
-
-<script src="/cinderblock-game.js" type="text/javascript"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/2.1.0/jquery.imagesloaded.min.js"></script>
 <script src="/joose-mini.js" type="text/javascript"></script>
+<script src="/cinderblock-game.js" type="text/javascript"></script>
 
 <script type="text/javascript">
    % my $game = stash 'game';
@@ -58,7 +58,7 @@
             //var slider_val = $(this).slider("value");
             var slider_val = ui.value;
             relevantGame.virtuallyGoToMove(slider_val);
-            relevantGame.log(slider_val);
+            //relevantGame.log(slider_val);
          });
          // move slider when time travelling.
          relevantGame.setOnVirtualMoveChange(function(move_num){

@@ -27,27 +27,61 @@ function mouseEventToRelative(e) {
 
 
 
-function GridBoard(w,h){
-   this.w = w;
-   this.h = h;
-   this.data = [];
-   for(i=0;i<this.h;i++){
-      this.data.push([]);
-   }
-   this.shadow_decor = null;
-   this.lastmove_decor = null;
-}
+Class( 'GridBoard', {
+   has: {
+      w: {is: 'ro', required: true},
+      h: {is: 'ro', required: true},
+      data: {
+         is: 'ro', required: false, lazy : true,
+         init: function(){ 
+            var grid = [];
+            for(var i=0; i<this.h; i++){
+               grid.push([]);
+            }
+            return grid;
+         },
+      },
+   },
+   methods: {
+      getStoneAtNode : function(node){
+         return this.getData()[node[0]][node[1]];
+      },
+      setNode : function(node,stone){
+         this.getData()[node[0]][node[1]] = stone;
+      },
+      clearNode : function(node){
+         this.getData()[node[0]][node[1]] = '';
+      },
+      applyDelta : function(delta){
+         var board = this;
+         var removes = delta.remove;
+         var adds = delta.add;
+         $.each(removes, function(){
+            var node = this[1];
+            board.clearNode(node);
+         });
+         $.each(adds, function(){
+            var node = this[1];
+            var stone = this[0];
+            board.setNode(node, stone);
+         });
+      },
+   },
+});
 
-GridBoard.prototype.getStoneAtNode = function(node){
+//   this.shadow_decor = null;
+  // this.lastmove_decor = null;
+
+GridBoard.prototype.lgetStoneAtNode = function(node){
    return this.data[node[0]][node[1]];
 }
-GridBoard.prototype.setNode= function(node,stone){
+GridBoard.prototype.lsetNode= function(node,stone){
    this.data[node[0]][node[1]] = stone;
 }
-GridBoard.prototype.clearNode= function(node){
+GridBoard.prototype.lclearNode= function(node){
    this.data[node[0]][node[1]] = '';
 }
-GridBoard.prototype.applyDelta = function(delta){
+GridBoard.prototype.lapplyDelta = function(delta){
    var board = this;
    var removes = delta.remove;
    var adds = delta.add;
@@ -84,10 +118,10 @@ function Game(opts){
 
    // game data:
    this.move_events = [];
-   this.actual_board = new GridBoard(this.w, this.h);
+   this.actual_board = new GridBoard({w: this.w, h: this.h});
    this.actual_turn = 'b';
 
-   this.virtual_board = new GridBoard(this.w, this.h);
+   this.virtual_board = new GridBoard({w: this.w, h: this.h});
    this.virtualMoveNum = 0;
    this.onVirtualMoveChange = function(arg){};
    this.onTotalMovesChange = function(arg){};
@@ -221,11 +255,21 @@ Game.prototype.draw = function(){
    this.images.w.src = this.image_urls["w"];
 
    this.images.bg = new Image();
-   this.images.bg.onload = function(){
+   this.images.bg.src = this.image_urls['bg'];
+   //this.images.bg.onload = function(){
+     // ctx.drawImage(game.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
+     // game.drawLines();
+   //};
+   this.FOO_CONTAINER = $('<div class="sorta-hidden"/>').append(this.images.bg).append(this.images.b);
+   $('body').append(this.FOO_CONTAINER);
+   $(this.FOO_CONTAINER).imagesLoaded( function($images,$proper,$broken){
+      game.log( $images.length + ' images total have been loaded' );
+      game.log( $proper.length + ' properly loaded images' );
+      game.log( $broken.length + ' broken images' );
+      var ctx = game.intermediateCanvas.getContext('2d');
       ctx.drawImage(game.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
       game.drawLines();
-   };
-   this.images.bg.src = this.image_urls['bg'];
+   });
 }
 
 Game.prototype.drawLines = function(){
@@ -534,7 +578,7 @@ Game.prototype.can_move = function(){
 
 
 Game.prototype.virtuallyGoToMove = function(destMoveNum){
-         this.log (this.virtualMoveNum + '->' + destMoveNum);
+   this.log ('gotomove: '+ this.virtualMoveNum + '->' + destMoveNum);
    if(destMoveNum == this.virtualMoveNum){
       return;
    }
