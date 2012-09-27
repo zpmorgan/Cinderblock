@@ -7,6 +7,7 @@
       background: url(/b.png) 50% 50% repeat-x;
       background-size: 100%;
       border:none;
+      outline: none;
    }
 </style>
 
@@ -47,20 +48,18 @@
          relevantGame.setCanvas($("canvas#goban")[0]);
          relevantGame.draw();
    });
-   //$(document).ready(function(){
-   //   $('#time-slider').slider();
+
    $(document).ready(function(){
-      //$('#time-slider').css('height', '100em');
-      $('#time-slider').slider();
-      //$('#time-slider').attr('height', '100px');
+         $('#time-slider').slider({max:2});
+         $('#time-slider').slider("option", "max", 0);
+         $("#time-slider").bind( "slide", function(e, ui) {
+            //var slider_val = $(this).slider("value");
+            var slider_val = ui.value;
+            relevantGame.virtuallyGoToMove(slider_val);
+            relevantGame.log(slider_val);
+         });
       });
-   //$('#time-slider').slider( {
-  // range: "min",  
-  // value: 35,  
-   //});
 
-
-    //  });
 </script>
 
 %# MAIN SECTION

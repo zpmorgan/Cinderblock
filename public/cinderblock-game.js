@@ -22,8 +22,13 @@ function Game(opts){
    this.move_events = [];
    this.actual_board = [];
    this.actual_turn = 'b';
-   for(i=0;i<this.h;i++)
+
+   this.virtual_board = [];
+   this.virtualMoveNum = 0;
+   for(i=0;i<this.h;i++){
       this.actual_board.push([]);
+      this.virtual_board.push([]);
+   }
 }
 Game.prototype.setCanvas = function(cnvs){
    var game = this;
@@ -194,25 +199,51 @@ Game.prototype.drawLines = function(){
    this.activate();
 }
 
-Game.prototype.handleMoveEvent = function(move_data){
+Game.prototype.applyDeltaToCanvas= function(delta){
    var game = this;
-   this.move_events.push(move_data);
-   var move_node = move_data.node;
-   var removes = move_data.delta.remove;
-   var adds = move_data.delta.add;
+   var removes = delta.remove;
+   var adds = delta.add;
    $.each(removes, function(){
       var node = this[1];
       game.clearNode(node);
-      game.clearActualBoardNode(node);
+   });
+   $.each(adds, function(){
+      var stone = this[0];
+      var node = this[1];
+      game.dropStone(stone, node);
+   });
+}
+Game.prototype.applyDeltaToBoard= function(delta, board){
+   var game = this;
+   var removes = delta.remove;
+   var adds = delta.add;
+   $.each(removes, function(){
+      var node = this[1];
+      game.clearNodeOnBoard(node, board);
    });
    $.each(adds, function(){
       var node = this[1];
       var stone = this[0];
-      game.dropStone(stone, node);
-      game.setActualBoardNode(node, stone);
+      game.setNodeOnBoard(node, stone, board);
    });
-   game.actual_turn = move_data.turn_after;
 }
+Game.prototype.handleMoveEvent = function(move_data){
+   this.move_events.push(move_data);
+   this.applyDeltaToBoard(move_data.delta, this.actual_board);
+   this.actual_turn = move_data.turn_after;
+   //this.virtualMoveNum++;
+   $('#time-slider').slider("option", "max", this.move_events.length);
+   var virtual_move_num = $('#time-slider').slider('value');
+   if(virtual_move_num == this.move_events.length-1){ 
+      // we're monitoring current state.
+      // so change canvas view automatically
+      $( "#time-slider" ).slider( "option", "value", this.move_events.length );
+      this.applyDeltaToCanvas(move_data.delta);
+      this.virtualMoveNum ++;
+   }
+//   else { alert( virtual_move_num + ',' + th) }
+}
+
 Game.prototype.dropStone = function(stone, node){
    if (this.shadow_node)
       this.eraseShadowStone();
@@ -422,13 +453,11 @@ Game.prototype.log = function(m){
    $('.sock-event-box').prepend(m + '<br />');
 }
 
-Game.prototype.clearActualBoardNode = function(node){
-   this.actual_board[node[0]][node[1]] = '';
+Game.prototype.clearNodeOnBoard = function(node, board){
+   board[node[0]][node[1]] = '';
 }
-Game.prototype.setActualBoardNode = function(node, stone){
-   //if(this.actual_board[node[0]] == null)
-     // this.actual_board[node[0]] = [];
-   this.actual_board[node[0]][node[1]] = stone;
+Game.prototype.setNodeOnBoard= function(node, stone, board){
+   board[node[0]][node[1]] = stone;
 }
 Game.prototype.getStoneAtActualNode = function(node){
    return this.actual_board[node[0]][node[1]];
@@ -457,3 +486,39 @@ Game.prototype.can_move = function(){
    return 1;
 }
 
+
+
+Game.prototype.virtuallyGoToMove = function(destMoveNum){
+         this.log (this.virtualMoveNum + '->' + destMoveNum);
+   if(destMoveNum == this.virtualMoveNum){
+      return;
+   }
+   if(destMoveNum > this.virtualMoveNum){
+      // go forwards in time
+      while (destMoveNum != this.virtualMoveNum){
+         var event_to_apply = this.move_events[this.virtualMoveNum];
+         this.applyDeltaToCanvas(event_to_apply.delta);
+         this.virtualMoveNum++;
+         //this.log (this.virtualMoveNum+1);
+         //this.log (this.virtualMoveNum);
+      }
+      return;
+   }
+   // go backwards in time
+   if(destMoveNum < this.virtualMoveNum){
+      // go forwards in time
+      while (destMoveNum != this.virtualMoveNum){
+         var event_to_reverse = this.move_events[this.virtualMoveNum-1];
+         var delta = event_to_reverse.delta;
+         var removes = delta.remove;
+         var adds = delta.add;
+         var reversed_delta = {
+            'add' : removes,
+            'remove' : adds,
+         };
+         this.applyDeltaToCanvas(reversed_delta);
+         this.virtualMoveNum--;
+      }
+      return;
+   }
+}
