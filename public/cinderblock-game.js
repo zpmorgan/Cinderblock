@@ -1,4 +1,39 @@
 
+function GridBoard(w,h){
+   this.w = w;
+   this.h = h;
+   this.data = [];
+
+   for(i=0;i<this.h;i++){
+      this.data.push([]);
+   }
+}
+
+GridBoard.prototype.getStoneAtNode = function(node){
+   return this.data[node[0]][node[1]];
+}
+GridBoard.prototype.setNode= function(node,stone){
+   this.data[node[0]][node[1]] = stone;
+}
+GridBoard.prototype.clearNode= function(node){
+   this.data[node[0]][node[1]] = '';
+}
+GridBoard.prototype.applyDelta = function(delta){
+   var board = this;
+   var removes = delta.remove;
+   var adds = delta.add;
+   $.each(removes, function(){
+      var node = this[1];
+      board.clearNode(node);
+   });
+   $.each(adds, function(){
+      var node = this[1];
+      var stone = this[0];
+      board.setNode(node, stone);
+   });
+}
+
+
 
 function Game(opts){
 
@@ -20,16 +55,17 @@ function Game(opts){
 
    // game data:
    this.move_events = [];
-   this.actual_board = [];
+   this.actual_board = new GridBoard(this.w, this.h);
    this.actual_turn = 'b';
 
-   this.virtual_board = [];
+   this.virtual_board = new GridBoard(this.w, this.h);
    this.virtualMoveNum = 0;
-   for(i=0;i<this.h;i++){
-      this.actual_board.push([]);
-      this.virtual_board.push([]);
-   }
 }
+
+Game.prototype.log = function(m){
+   $('.sock-event-box').prepend(m + '<br />');
+}
+
 Game.prototype.setCanvas = function(cnvs){
    var game = this;
    this.finalCanvas = cnvs;
@@ -213,7 +249,7 @@ Game.prototype.applyDeltaToCanvas= function(delta){
       game.dropStone(stone, node);
    });
 }
-Game.prototype.applyDeltaToBoard= function(delta, board){
+Game.prototype.FOOapplyDeltaToBoard= function(delta, board){
    var game = this;
    var removes = delta.remove;
    var adds = delta.add;
@@ -229,7 +265,7 @@ Game.prototype.applyDeltaToBoard= function(delta, board){
 }
 Game.prototype.handleMoveEvent = function(move_data){
    this.move_events.push(move_data);
-   this.applyDeltaToBoard(move_data.delta, this.actual_board);
+   this.actual_board.applyDelta(move_data.delta);
    this.actual_turn = move_data.turn_after;
    //this.virtualMoveNum++;
    $('#time-slider').slider("option", "max", this.move_events.length);
@@ -348,7 +384,7 @@ Game.prototype.displayShadowStone = function(board_node){
       draw_new = true;
    }
    // don't do shadow if an actual stone is there.
-   var colliding_stone = this.getStoneAtActualNode(board_node);
+   var colliding_stone = this.actual_board.getStoneAtNode(board_node);
    if (colliding_stone)
       draw_new = false;
 
@@ -449,23 +485,9 @@ Game.prototype.openSocket = function(){
    };
 }
 
-Game.prototype.log = function(m){
-   $('.sock-event-box').prepend(m + '<br />');
-}
-
-Game.prototype.clearNodeOnBoard = function(node, board){
-   board[node[0]][node[1]] = '';
-}
-Game.prototype.setNodeOnBoard= function(node, stone, board){
-   board[node[0]][node[1]] = stone;
-}
-Game.prototype.getStoneAtActualNode = function(node){
-   return this.actual_board[node[0]][node[1]];
-}
-
 // return 0 on fail, 1 on maybe?
 Game.prototype.attemptMove = function(node){
-   var stone_collision = this.getStoneAtActualNode(node);
+   var stone_collision = this.actual_board.getStoneAtNode(node);
    if(stone_collision)
       return 0;
    var attempt = {
