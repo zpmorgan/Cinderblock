@@ -21,6 +21,10 @@ sub new_game_form{
    my $self = shift;
    $self->render(template => 'game/new_game_form');
 }
+sub welcome{
+   my $self = shift;
+   $self->render(template => 'game/welcome');
+}
 
 sub new_game{
    my $self = shift;

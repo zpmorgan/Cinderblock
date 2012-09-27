@@ -78,6 +78,7 @@ sub startup {
    my $r = $self->routes;
 
    # Normal route to controller
+   $r->get('/')->to('game#welcome');
    $r->get('/new_game/')->to('game#new_game_form');
    $r->post('/new_game/')->to('game#new_game');
    $r->get('/invite/:invite_code/')->to('game#be_invited');

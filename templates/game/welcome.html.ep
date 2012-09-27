@@ -1,0 +1,13 @@
+% layout 'foo_layout',
+<div class="wrapperblock ">
+   <div style="height: 200px; display:block;margin:0 auto"> </div>
+   <div class="welcome rounded-corners colors-light-on-dark">
+      The Cinderblock Go Server is capable of realtime or correspondence-style
+      Go games on a planar, cylindrical, or toroidal board. It supports board
+      sizes from 2 to 30 nodes in either dimension.
+      <br />
+      <a href="http://cinderblock.zpmorgan.com/new_game">New game</a>
+      <br />
+      <a href="http://cinderblock.zpmorgan.com/game/29">Example game</a>
+   </div>
+</div>
