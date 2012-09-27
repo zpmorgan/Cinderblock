@@ -1,4 +1,32 @@
 
+function moddd(i, i_max) {
+      return ((i % i_max) + i_max) % i_max;
+}
+function mouseEventToRelative(e) {
+
+    //this section is from http://www.quirksmode.org/js/events_properties.html
+    var targ;
+    if (!e)
+        e = window.event;
+    if (e.target)
+        targ = e.target;
+    else if (e.srcElement)
+        targ = e.srcElement;
+    if (targ.nodeType == 3) // defeat Safari bug
+        targ = targ.parentNode;
+
+    // jQuery normalizes the pageX and pageY
+    // pageX,Y are the mouse positions relative to the document
+    // offset() returns the position of the element relative to the document
+    var x = e.pageX - $(targ).offset().left;
+    var y = e.pageY - $(targ).offset().top;
+
+    //return {"x": x, "y": y};
+    return [x,y];
+};
+
+
+
 function GridBoard(w,h){
    this.w = w;
    this.h = h;
@@ -95,7 +123,7 @@ Game.prototype.setCanvas = function(cnvs){
       // left mouse button == Move!
       if(e_down.which == 1){
          if(!game.can_move()) {return;}
-         var point = game.mouseEventToRelCoords(e_down,this);
+         var point = mouseEventToRelative(e_down);
          var boardnode = game.canvasXYToNode(point[0],point[1]);
          if(!boardnode){ return;}
          game.attemptMove(boardnode);
@@ -353,9 +381,6 @@ Game.prototype.redrawFinalWithOffset = function(){
 
 }
 
-function moddd(i, i_max) {
-      return ((i % i_max) + i_max) % i_max;
-}
 
 // clear shadow stone. replace with empty board section.
 Game.prototype.eraseShadowStone = function(){
@@ -408,17 +433,11 @@ Game.prototype.displayShadowStone = function(board_node){
    }
 }
 
-Game.prototype.mouseEventToRelCoords = function(e, canvas_selector){
-   var x = e.pageX - canvas_selector.offsetLeft;
-   var y = e.pageY - canvas_selector.offsetTop;
-   return [x,y];
-}
-
 Game.prototype.activate = function(){
    var game = this;
    $(game.finalCanvas).mousemove(function(e){
       if(!game.can_move()) {return;}
-      var point = game.mouseEventToRelCoords(e,this);
+      var point = mouseEventToRelative(e);
       var boardnode = game.canvasXYToNode(point[0],point[1]);
       if(!boardnode){ return;}
       game.displayShadowStone(boardnode);
