@@ -41,7 +41,7 @@
 
    var relevantGame;
    $(document).ready(function(){
-         relevantGame = new Game({
+         relevantGame = new CinderblockGame({
             w: PORTAL_DATA.game_w,
             h: PORTAL_DATA.game_h,
             wrap_v: PORTAL_DATA.game_wrap_v,
