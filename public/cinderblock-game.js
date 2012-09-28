@@ -3,7 +3,6 @@ function moddd(i, i_max) {
       return ((i % i_max) + i_max) % i_max;
 }
 function mouseEventToRelative(e) {
-
     //this section is from http://www.quirksmode.org/js/events_properties.html
     var targ;
     if (!e)
@@ -72,29 +71,6 @@ Class( 'GridBoard', {
 //   this.shadow_decor = null;
   // this.lastmove_decor = null;
 
-GridBoard.prototype.lgetStoneAtNode = function(node){
-   return this.data[node[0]][node[1]];
-}
-GridBoard.prototype.lsetNode= function(node,stone){
-   this.data[node[0]][node[1]] = stone;
-}
-GridBoard.prototype.lclearNode= function(node){
-   this.data[node[0]][node[1]] = '';
-}
-GridBoard.prototype.lapplyDelta = function(delta){
-   var board = this;
-   var removes = delta.remove;
-   var adds = delta.add;
-   $.each(removes, function(){
-      var node = this[1];
-      board.clearNode(node);
-   });
-   $.each(adds, function(){
-      var node = this[1];
-      var stone = this[0];
-      board.setNode(node, stone);
-   });
-}
 
 
 
