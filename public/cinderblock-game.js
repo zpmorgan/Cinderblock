@@ -221,6 +221,8 @@ Class ('CinderblockView', {
          var lefttt = this.game.wrap_h ? 0 : grid_box[0];
          var rightt = this.game.wrap_h ? this.canvasWidth() : grid_box[2];
          //vertical lines
+         ctx.save();
+         ctx.beginPath();
          for(i=0;i<this.game.w;i++){
             var p = i / (this.game.w-1);
             var x = grid_box[0] + (p * this.grid_w)
@@ -228,7 +230,6 @@ Class ('CinderblockView', {
             ctx.lineWidth = 1.2;
             ctx.moveTo(x, topppp);
             ctx.lineTo(x, bottom);
-            ctx.stroke();
          }
          // h lines
          for(i=0;i<this.game.h;i++){
@@ -238,8 +239,10 @@ Class ('CinderblockView', {
             ctx.lineWidth = 1.2;
             ctx.moveTo(lefttt, y);
             ctx.lineTo(rightt, y);
-            ctx.stroke();
          }
+         ctx.stroke();
+         ctx.closePath();
+         ctx.restore();
          //copy empty board to paste over removed stuff.
          this.empty_board_image_data = 
             ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -490,6 +493,43 @@ Class ('CinderblockView', {
 
       },
 
+      eraseLastMoveMark: function(){
+         if( this.lastMoveMarkStone == null) //nothing marked.
+            return;
+         this.dropStone (this.lastMoveMarkStone, this.lastMoveMarkNode);
+         this.redrawNodeOnFinal(this.lastMoveMarkNode);
+         this.lastMoveMarkStone = null;
+         this.lastMoveMarkNode = null;
+      },
+      markLastMove: function(){
+         if(this.virtualMoveNum == 0)
+            return;
+         var delta = this.game.move_events[this.virtualMoveNum-1].delta;
+         if(delta.add.length != 1){
+            this.game.log('FOOOOOOOOO?');
+            return;
+         }
+         var stone_to_mark = delta.add[0][0];
+         var node_to_mark = delta.add[0][1];
+         this.lastMoveMarkStone = stone_to_mark;
+         this.lastMoveMarkNode = node_to_mark;
+
+         var point = this.nodeToPoint(node_to_mark);
+         var x = point[0];
+         var y = point[1];
+         var r = this.node_w * .25;
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         ctx.save();
+         ctx.beginPath();
+         ctx.lineWidth=4;
+         ctx.strokeStyle= (stone_to_mark == 'w') ? "black" : 'white';
+         ctx.moveTo(x+r, y);
+         ctx.arc(x, y, r, 0, Math.PI*2, true); 
+         ctx.closePath();
+         ctx.stroke();
+         ctx.restore();
+         this.redrawNodeOnFinal(node_to_mark);
+      },
 
       // clear shadow stone. replace with empty board section.
       eraseShadowStone : function(){
@@ -601,6 +641,7 @@ Class ('CinderblockView', {
          if(destMoveNum == this.virtualMoveNum){
             return;
          }
+         this.eraseLastMoveMark();
          if(destMoveNum > this.virtualMoveNum){
             // go forwards in time
             while (destMoveNum != this.virtualMoveNum){
@@ -611,6 +652,7 @@ Class ('CinderblockView', {
                //this.log (this.virtualMoveNum);
             }
             this.onVirtualMoveChange(this.virtualMoveNum);
+            this.markLastMove();
             return;
          }
          // go backwards in time
@@ -629,9 +671,11 @@ Class ('CinderblockView', {
                this.virtualMoveNum--;
             }
             this.onVirtualMoveChange(this.virtualMoveNum);
+            this.markLastMove();
             return;
          }
       },
+
       virtuallyGoToStart : function(){
          this.virtuallyGoToMove(0);
       },
