@@ -40,6 +40,7 @@
    };
 
    var relevantGame;
+   var relevantView;
    $(document).ready(function(){
          relevantGame = new CinderblockGame({
             w: PORTAL_DATA.game_w,
@@ -47,8 +48,8 @@
             wrap_v: PORTAL_DATA.game_wrap_v,
             wrap_h: PORTAL_DATA.game_wrap_h,
             });
-         relevantGame.setCanvas($("canvas#goban")[0]);
-         relevantGame.draw();
+         relevantView = relevantGame.setupViewOnCanvas($("canvas#goban")[0]);
+         relevantView.draw();
    });
 
    $(document).ready(function(){
@@ -70,6 +71,7 @@
          relevantGame.setOnTotalMovesChange(function(total_moves){
             //$('#time-slider').slider("option", "value", move_num);
             $("#time-machine-total-moves").text(total_moves);
+            $('#time-slider').slider("option", "max", total_moves);
             });
       });
    $(document).ready(function(){

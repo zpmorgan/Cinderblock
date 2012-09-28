@@ -1,4 +1,10 @@
 
+// Goal:
+// So Game has a View, game & view each have GridBoards.
+// view has decoration & canvases...
+// game has no reference to view... only callbacks?
+
+
 // 2 utility funcs:
 // modulus, doesn't mess up negatives.
 function moddd(i, i_max) {
@@ -26,7 +32,6 @@ function mouseEventToRelative(e) {
     //return {"x": x, "y": y};
     return [x,y];
 };
-
 
 
 Class( 'GridBoard', {
@@ -80,17 +85,15 @@ Class('CinderblockGame', {
    has: {
      // empty_board_image_data: {is: 'rw'},
       // only stones: 
-      intermediateCanvas : {is:rw},
+      // canvases went to view.
+      //intermediateCanvas : {is:rw},
       // marked & scrolled.
-      finalCanvas : {is: rw},
+      //finalCanvas : {is: rw},
       // rules:
       w : {is:'rw',init:19},
       h : {is:'rw',init:19},
       wrap_v : {is:'rw',init:false},
       wrap_h : {is:'rw',init:false},
-      // cached offsets for drawing: TODO:to 'view'
-      h_lines : {is:'ro',init:function(){return []}},
-      v_lines : {is:'ro',init:function(){return []}},
       // game data:
       move_events :{is:'ro',init:function(){return []}},
       actual_board : {
@@ -99,401 +102,45 @@ Class('CinderblockGame', {
          init:function () { return new GridBoard({w: this.w, h: this.h}) },
       },
       actual_turn : {is:'rw',init:'b'},
-      // TODO:to 'view'
-      //this.virtual_board = new GridBoard({w: this.w, h: this.h});
-      actual_turn : {is:'rw',init:0},
-      virtualMoveNum: {is:'rw',init:0},
-      //this.onVirtualMoveChange = function(arg){};
-      //this.onTotalMovesChange = function(arg){};
    },
    methods: {
+      // TODO: numTurns?
 
       log : function(m){
          $('.sock-event-box').prepend(m + '<br />');
       },
-      setCanvas : function(cnvs){
-         var game = this;
-         this.finalCanvas = cnvs;
-         this.determineCanvasDims();
-         cnvs.width = this.calc_canvas_w;
-         cnvs.height = this.calc_canvas_h;
-         $('div.middoblock').width ( Math.floor(this.calc_canvas_w) );
-         var margin = this.margin = this.calc_stone_size / 2;
-      // TODO: kill grid_box
-         var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
-         this.grid_box = grid_box;
-         this.grid_w = grid_box[2] - grid_box[0];
-         this.grid_h = grid_box[3] - grid_box[1];
-         this.node_w = this.grid_w / (this.w-1);
-         this.node_h = this.grid_h / (this.h-1);
-         this.intermediateCanvas = $('<canvas />')[0];
-         this.intermediateCanvas.width = cnvs.width;
-         this.intermediateCanvas.height = cnvs.height;
-         this.offset_x = 0;
-         this.offset_y = 0;
-
-         // mouse handler..
-         $(game.finalCanvas).mousedown(function(e_down){
-            // left mouse button == Move!
-            if(e_down.which == 1){
-               if(!game.can_move()) {return;}
-               var point = mouseEventToRelative(e_down);
-               var boardnode = game.canvasXYToNode(point[0],point[1]);
-               if(!boardnode){ return;}
-               game.attemptMove(boardnode);
-            }
-            // right mouse button == drag!
-            if(e_down.which == 3){
-               e_down.preventDefault(); //no menu.
-               //if(this.wrap_v || this.wrap_h){
-               game.grabx = e_down.pageX;
-               game.graby = e_down.pageY;
-               game.in_grab = true;
-               $(document).mousemove(function(e_move){
-                  game.movex = e_move.pageX;
-                  game.movey = e_move.pageY;
-                  game.redrawFinalWithOffset();
-               });
-               $(document).mouseup(function(e_move){
-                  game.in_grab = false;
-                  $(document).unbind('mouseup');
-                  $(document).unbind('mousemove');
-                  var dispx = game.movex - game.grabx;
-                  var dispy = game.movey - game.graby;
-                  game.log('DRAGGED X '+dispx);
-                  game.log('DRAGGED Y '+dispy);
-                  game.graby = game.grabx = 0;
-                  game.movey = game.movex = 0;
-                  game.offset_x += dispx;
-                  game.offset_y += dispy;
-                  game.redrawFinalWithOffset();
-               });
-            }
+      setupViewOnCanvas : function(cnvs){
+         var view = new CinderblockView({
+            game: this,
          });
-         $(game.finalCanvas).bind('contextmenu',function(e){e.preventDefault();return false});
-
-         // keys for scrolling.
-         $(document).keydown(function(e){
-            var c = String.fromCharCode(e.which);
-            if(c == 'A' || c == 'H'){
-               game.offset_x += +20;
-            }
-            else if(c == 'D' || c == 'L'){
-               game.offset_x += -20;
-            }
-            else if(c == 'K' || c == 'W'){
-               game.offset_y += +20;
-            }
-            else if(c == 'S' || c == 'J'){
-               game.offset_y += -20;
-            }
-            else {return}
-            game.redrawFinalWithOffset();
-         });
-      }, //end setCanvas
-
-      // guess board canvas dims from window dims.
-      // should change upon resize. TODO: to 'view'
-      determineCanvasDims : function(){
-         var win_w = $(window).width();
-         var win_h = $(window).height();
-         var avail_w = win_w *.95 - 40;
-         avail_w -= $('div.leftoblock').width();
-         avail_w -= $('div.rightoblock').width();
-         var avail_h = win_h - 60;
-         if(avail_w < 350)
-            avail_w = 350;
-         if(avail_h < 350)
-            avail_h = 350;
-         var max_stone_size_x = avail_w / this.w;
-         var max_stone_size_y = avail_h / this.h;
-         var stone_size;
-         if(max_stone_size_x > max_stone_size_y){
-            this.calc_stone_size = max_stone_size_y;
-         } else {
-            this.calc_stone_size = max_stone_size_x;
-         }
-         this.calc_stone_size = Math.floor(this.calc_stone_size);
-         this.calc_canvas_w  =  Math.floor(this.calc_stone_size * this.w);
-         this.calc_canvas_h =   Math.floor(this.calc_stone_size * this.h);
-      },
-
-      draw : function(){
-         if(!this.intermediateCanvas){
-            alert('no canvas! ' + this.canvas);
-            return;
-         }
-         var game = this;
-         var ctx = game.intermediateCanvas.getContext('2d');
-         ctx.fillStyle = 'red';
-         //var bg = $("#wood-bg")[0];
-         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142.JPG"};
-         this.images = new Object();
-         this.images.b = new Image();
-         this.images.b.src = this.image_urls["b"];
-         this.images.w = new Image();
-         this.images.w.src = this.image_urls["w"];
-
-         this.images.bg = new Image();
-         this.images.bg.src = this.image_urls['bg'];
-         //this.images.bg.onload = function(){
-           // ctx.drawImage(game.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
-           // game.drawLines();
-         //};
-         this.FOO_CONTAINER = $('<div class="sorta-hidden"/>').append(this.images.bg).append(this.images.b);
-         $('body').append(this.FOO_CONTAINER);
-         $(this.FOO_CONTAINER).imagesLoaded( function($images,$proper,$broken){
-            game.log( $images.length + ' images total have been loaded' );
-            game.log( $proper.length + ' properly loaded images' );
-            game.log( $broken.length + ' broken images' );
-            var ctx = game.intermediateCanvas.getContext('2d');
-            ctx.drawImage(game.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
-            game.drawLines();
-         });
-      },
-
-      drawLines : function(){
-         var game = this;
-         var ctx = game.intermediateCanvas.getContext('2d');
-         var fctx = game.finalCanvas.getContext('2d');
-         var margin = this.margin;
-         var grid_box = this.grid_box;
-         var topppp = this.wrap_v ? 0 : grid_box[1];
-         var bottom = this.wrap_v ? this.finalCanvas.height : grid_box[3];
-         var lefttt = this.wrap_h ? 0 : grid_box[0];
-         var rightt = this.wrap_h ? this.finalCanvas.width : grid_box[2];
-         //vertical lines
-         for(i=0;i<this.w;i++){
-            var p = i / (this.w-1);
-            var x = grid_box[0] + (p * this.grid_w)
-            this.v_lines[i] = x;
-            ctx.lineWidth = 1.2;
-            ctx.moveTo(x, topppp);
-            ctx.lineTo(x, bottom);
-            ctx.stroke();
-         }
-         // h lines
-         for(i=0;i<this.h;i++){
-            var p = i / (this.h-1);
-            var y = grid_box[1] + (p * this.grid_h);
-            this.v_lines[i] = y;
-            ctx.lineWidth = 1.2;
-            ctx.moveTo(lefttt, y);
-            ctx.lineTo(rightt, y);
-            ctx.stroke();
-         }
-         //copy empty board to paste over removed stuff.
-         this.empty_board_image_data = 
-            ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-         //fctx.drawImage(this.intermediateCanvas,0,0); 
-         game.redrawFinalWithOffset();
-         this.activate();
-      },
-
-      applyDeltaToCanvas : function(delta){
-         var game = this;
-         var removes = delta.remove;
-         var adds = delta.add;
-         $.each(removes, function(){
-            var node = this[1];
-            game.clearNode(node);
-         });
-         $.each(adds, function(){
-            var stone = this[0];
-            var node = this[1];
-            game.dropStone(stone, node);
-         });
+         view.finagleCanvas(cnvs);
+         return view;
       },
 
       handleMoveEvent : function(move_data){
          this.move_events.push(move_data);
          this.getActual_board().applyDelta(move_data.delta);
          this.actual_turn = move_data.turn_after;
+         this.onNewMoveEvent(move_data); //cb
+         //stuff now in callback? :
          //this.virtualMoveNum++;
-         $('#time-slider').slider("option", "max", this.move_events.length);
-         var virtual_move_num = $('#time-slider').slider('value');
-         if(virtual_move_num == this.move_events.length-1){ 
+         //var virtual_move_num = $('#time-slider').slider('value');
+         //if(virtual_move_num == this.move_events.length-1){ 
             // we're monitoring current state.
             // so change canvas view automatically
-            $( "#time-slider" ).slider( "option", "value", this.move_events.length );
-            this.applyDeltaToCanvas(move_data.delta);
-            this.virtualMoveNum ++;
-            this.onVirtualMoveChange(this.virtualMoveNum);
-         }
+            //this.applyDeltaToCanvas(move_data.delta);
+            //this.virtualMoveNum ++;
+            //this.onVirtualMoveChange(this.virtualMoveNum);
+         //}
          this.onTotalMovesChange (this.move_events.length);
       },
-
-      dropStone : function(stone, node){
-         if (this.shadow_node)
-            this.eraseShadowStone();
-         var ictx = this.intermediateCanvas.getContext('2d');
-         var fctx = this.finalCanvas.getContext('2d');
-         var point = this.nodeToPoint(node);
-         var stone_img = this.images[stone];
-         ictx.drawImage(stone_img,
-               point[0] - this.node_w/2, point[1]-this.node_h/2,
-               this.node_w, this.node_h);
-         this.redrawNodeOnFinal(node);
+   
+      // funky callback thing.
+      setOnNewMoveEvent : function(cb){
+         this.onNewMoveEvent = cb;
       },
-      redrawNodeOnFinal : function(node){
-         var point = this.nodeToPoint(node);
-         var fctx = this.finalCanvas.getContext('2d');
-         var orig_x = point[0] - this.node_w/2;
-         var orig_y = point[1] - this.node_h/2;
-         var offset_x = this.wrap_h ? this.offset_x : 0;
-         var offset_y = this.wrap_v ? this.offset_y : 0;
+      onNewMoveEvent : function(delta){},
 
-         var cwidth = this.finalCanvas.width;
-         var cheight = this.finalCanvas.height;
-         var new_x = moddd(orig_x + offset_x, cwidth);
-         var new_y = moddd(orig_y + offset_y, cheight);
-         var virtual_nodes = [
-            [new_x, new_y],
-            [new_x, new_y - cheight],
-            [new_x - cwidth, new_y],
-            [new_x - cwidth, new_y - cheight],
-            ];
-         for(var i=0;i<4;i++){
-            fctx.drawImage(this.intermediateCanvas,
-                  orig_x, orig_y,
-                  this.node_w, this.node_h,
-                  virtual_nodes[i][0], virtual_nodes[i][1],
-                  this.node_w, this.node_h);
-         }
-      },
-      redrawFinalWithOffset : function(){
-         var fctx = this.finalCanvas.getContext('2d');
-         var offset_x = this.offset_x;
-         var offset_y = this.offset_y;
-         if(this.in_grab){
-            var dispx = this.movex - this.grabx;
-            var dispy = this.movey - this.graby;
-            offset_x += dispx;
-            offset_y += dispy;
-         }
-         if(!this.wrap_v)
-            offset_y = 0;
-         if(!this.wrap_h)
-            offset_x = 0;
-         var cwidth = this.finalCanvas.width;
-         var cheight= this.finalCanvas.height;
-         var wrapping_offsets = [
-            [moddd(offset_x , cwidth), moddd(offset_y , cheight)],
-            [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)],
-            [moddd(offset_x , cwidth), moddd(offset_y , cheight)-cheight],
-            [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)-cheight]
-         ];
-         for(var i=0;i<4;i++){   
-            fctx.drawImage(this.intermediateCanvas,
-                  0,0,cwidth,cheight, //src
-                  wrapping_offsets[i][0], wrapping_offsets[i][1], cwidth,cheight); //dest
-         }
-
-      },
-
-
-      // clear shadow stone. replace with empty board section.
-      eraseShadowStone : function(){
-         this.clearNode(this.shadow_node);
-         this.shadow_node = null;
-      },
-      clearNode : function(node){
-         var ctx = this.intermediateCanvas.getContext('2d');
-         var point = this.nodeToPoint(node);
-         var x = point[0] - this.node_w/2;
-         var y = point[1] - this.node_h/2;
-         ctx.putImageData(this.empty_board_image_data, 
-               0,0,x,y, this.node_w, this.node_h);
-         this.redrawNodeOnFinal(node);
-      },
-      displayShadowStone : function(board_node){
-         var ctx = this.intermediateCanvas.getContext('2d');
-
-         var rm_old = false;
-         var draw_new = false;
-
-         if (board_node != null && this.shadow_node != null){
-            if (board_node[0]!=this.shadow_node[0] || board_node[1]!=this.shadow_node[1]){
-               draw_new = true;
-               rm_old = true;
-            }
-         } else if (board_node == null && this.shadow_node != null){
-            rm_old = true;
-         } else if (board_node != null){
-            draw_new = true;
-         }
-         // don't do shadow if an actual stone is there.
-         var colliding_stone = this.getActual_board().getStoneAtNode(board_node);
-         if (colliding_stone)
-            draw_new = false;
-
-         if(rm_old == true) {
-            this.eraseShadowStone();
-         }
-
-         if(draw_new == true) {
-            var point = this.nodeToPoint(board_node);
-            ctx.globalAlpha = .5;
-            ctx.drawImage(this.images[PORTAL_DATA.color],
-               point[0] - this.node_w/2, point[1]-this.node_h/2,
-               this.node_w, this.node_h);
-            this.shadow_node = board_node;
-            ctx.globalAlpha = 1;
-            this.redrawNodeOnFinal(board_node);
-         }
-      },
-
-      activate : function(){
-         var game = this;
-         $(game.finalCanvas).mousemove(function(e){
-            if(!game.can_move()) {return;}
-            var point = mouseEventToRelative(e);
-            var boardnode = game.canvasXYToNode(point[0],point[1]);
-            if(!boardnode){ return;}
-            game.displayShadowStone(boardnode);
-         });
-         this.openSocket();
-      },
-
-      nodeToPoint : function(node){
-         var row = node[0];
-         var col = node[1];
-         var x = this.grid_box[0] + this.grid_w * col / (this.w-1);
-         var y = this.grid_box[1] + this.grid_h * row / (this.h-1);
-         return [x,y];
-      },
-
-      canvasXYToNode : function(x,y){
-         var row = -1, col = -1;
-         var reach_x = this.node_w/2;
-         var reach_y = this.node_h/2;
-         if(this.wrap_h){
-            x -= this.offset_x;
-            x=moddd(x,this.finalCanvas.width);
-         }
-         if(this.wrap_v){
-            y -= this.offset_y;
-            y=moddd(y,this.finalCanvas.height);
-         }
-         for (i=0;i<this.w;i++){
-            var node_x = this.grid_box[0] + i*this.node_w;
-            if( (x > node_x-reach_x) && (x < node_x+reach_x)){
-               col = i;
-               break;
-            }
-         }
-         for (i=0;i<this.h;i++){
-            var node_y = this.grid_box[1] + i*this.node_h;
-            if( (y > node_y-reach_y) && (y < node_y+reach_y)){
-               row = i;
-               break;
-            }
-         }
-         if (row == -1 || col == -1){
-            return null;
-         }
-         return [row,col];
-      },
 
       openSocket : function(){
          var game = this;
@@ -531,15 +178,6 @@ Class('CinderblockGame', {
          };
          this.sock.send(JSON.stringify(attempt));
       },
-
-      can_move : function(){
-         if(PORTAL_DATA.role == 'watcher')
-            return 0;
-         if (this.actual_turn != PORTAL_DATA.color)
-            return 0;
-         return 1;
-      },
-
 
 
       virtuallyGoToMove : function(destMoveNum){
@@ -603,3 +241,426 @@ Class('CinderblockGame', {
       },
    },
 }); //end CinderblockGame class
+
+
+
+Class ('CinderblockView', {
+   has: {
+      game: {
+         isa: function () { return m.CinderblockGame} , 
+         is:'ro',
+      }, 
+      finalCanvas : {is:'rw'},// required:true},
+      intermediateCanvas: {is:'rw'},
+      // cached offsets for drawing:
+      h_lines : {is:'ro',init:function(){return []}},
+      v_lines : {is:'ro',init:function(){return []}},
+      // TODO:to 'view'
+      //this.virtual_board = new GridBoard({w: this.game.w, h: this.game.h});
+      virtualMoveNum: {is:'rw',init:0},
+      //this.onVirtualMoveChange = function(arg){};
+      //this.onTotalMovesChange = function(arg){};
+      canvasFinagled : {is:'rw', required:false},
+   },
+   methods: {
+      canvasWidth:  function(){return this.getFinalCanvas().width},
+      canvasHeight: function(){return this.getFinalCanvas().height},
+
+      can_move : function(){
+         if(PORTAL_DATA.role == 'watcher')
+            return 0;
+         if (this.game.actual_turn != PORTAL_DATA.color)
+            return 0;
+         if(this.virtualMoveNum != this.game.move_events.length)
+            return 0;
+         return 1;
+      },
+
+
+
+      drawLines : function(){
+         var view= this;
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         var fctx = this.getFinalCanvas().getContext('2d');
+         var margin = this.margin;
+         var grid_box = this.grid_box;
+         var topppp = this.game.wrap_v ? 0 : grid_box[1];
+         var bottom = this.game.wrap_v ? this.canvasHeight() : grid_box[3];
+         var lefttt = this.game.wrap_h ? 0 : grid_box[0];
+         var rightt = this.game.wrap_h ? this.canvasWidth() : grid_box[2];
+         //vertical lines
+         for(i=0;i<this.game.w;i++){
+            var p = i / (this.game.w-1);
+            var x = grid_box[0] + (p * this.grid_w)
+            this.v_lines[i] = x;
+            ctx.lineWidth = 1.2;
+            ctx.moveTo(x, topppp);
+            ctx.lineTo(x, bottom);
+            ctx.stroke();
+         }
+         // h lines
+         for(i=0;i<this.game.h;i++){
+            var p = i / (this.game.h-1);
+            var y = grid_box[1] + (p * this.grid_h);
+            this.h_lines[i] = y;
+            ctx.lineWidth = 1.2;
+            ctx.moveTo(lefttt, y);
+            ctx.lineTo(rightt, y);
+            ctx.stroke();
+         }
+         //copy empty board to paste over removed stuff.
+         this.empty_board_image_data = 
+            ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+         //fctx.drawImage(this.intermediateCanvas,0,0); 
+         this.redrawFinalWithOffset();
+         this.activate();
+      },
+      finagleCanvas : function(cnvs){
+         var view = this;
+         this.setFinalCanvas (cnvs);
+
+         var calc_canvas_dims = this.determineCanvasDims();
+         this.calc_stone_size = calc_canvas_dims.stone_size;
+         cnvs.width = calc_canvas_dims.w;
+         cnvs.height = calc_canvas_dims.h;
+         
+         $('div.middoblock').width ( Math.floor(cnvs.width) );
+         var margin = this.margin = this.calc_stone_size / 2;
+      // TODO: kill grid_box
+         var grid_box = [margin,margin,cnvs.width-margin, cnvs.height-margin];
+         this.grid_box = grid_box;
+         this.grid_w = grid_box[2] - grid_box[0];
+         this.grid_h = grid_box[3] - grid_box[1];
+         this.node_w = this.grid_w / (this.game.w-1);
+         this.node_h = this.grid_h / (this.game.h-1);
+
+         var ic = $('<canvas />')[0];
+         this.setIntermediateCanvas(ic);
+         ic.width = cnvs.width;
+         ic.height = cnvs.height;
+
+         this.offset_x = 0;
+         this.offset_y = 0;
+
+         // mouse handler..
+         $(this.getFinalCanvas()).mousedown(function(e_down){
+            // left mouse button == Move!
+            if(e_down.which == 1){
+               if(!view.can_move()) {return;}
+               var point = mouseEventToRelative(e_down);
+               var boardnode = view.canvasXYToNode(point[0],point[1]);
+               if(!boardnode){ return;}
+               view.game.attemptMove(boardnode);
+            }
+            // right mouse button == drag!
+            if(e_down.which == 3){
+               e_down.preventDefault(); //no menu.
+               //if(this.wrap_v || this.wrap_h){
+               view.grabx = e_down.pageX;
+               view.graby = e_down.pageY;
+               view.in_grab = true;
+               $(document).mousemove(function(e_move){
+                  view.movex = e_move.pageX;
+                  view.movey = e_move.pageY;
+                  view.redrawFinalWithOffset();
+               });
+               $(document).mouseup(function(e_move){
+                  view.in_grab = false;
+                  $(document).unbind('mouseup');
+                  $(document).unbind('mousemove');
+                  var dispx = view.movex - view.grabx;
+                  var dispy = view.movey - view.graby;
+                  view.game.log('DRAGGED X '+dispx);
+                  view.game.log('DRAGGED Y '+dispy);
+                  view.graby = view.grabx = 0;
+                  view.movey = view.movex = 0;
+                  view.offset_x += dispx;
+                  view.offset_y += dispy;
+                  view.redrawFinalWithOffset();
+               });
+            }
+         });
+         $(view.getFinalCanvas()).bind('contextmenu',function(e){e.preventDefault();return false});
+
+         // keys for scrolling.
+         $(document).keydown(function(e){
+            var c = String.fromCharCode(e.which);
+            if(c == 'A' || c == 'H'){
+               view.offset_x += +20;
+            }
+            else if(c == 'D' || c == 'L'){
+               view.offset_x += -20;
+            }
+            else if(c == 'K' || c == 'W'){
+               view.offset_y += +20;
+            }
+            else if(c == 'S' || c == 'J'){
+               view.offset_y += -20;
+            }
+            else {return}
+            view.redrawFinalWithOffset();
+         });
+
+         this.game.setOnNewMoveEvent(function(move_data){
+            if(view.virtualMoveNum == view.game.move_events.length-1){ 
+               view.applyDeltaToCanvas(move_data.delta);
+               view.virtualMoveNum ++;
+               $( "#time-slider" ).slider( "option", "value", view.game.move_events.length );
+            }
+         });
+
+         this.canvasFinagled = true; //pretty darn finagled.
+      }, //end finagleCanvas
+
+      // guess board canvas dims from window dims.
+      // should change upon resize. TODO: to 'view'
+      determineCanvasDims : function(){
+         var win_w = $(window).width();
+         var win_h = $(window).height();
+         var avail_w = win_w *.95 - 40;
+         avail_w -= $('div.leftoblock').width();
+         avail_w -= $('div.rightoblock').width();
+         var avail_h = win_h - 60;
+         if(avail_w < 350)
+            avail_w = 350;
+         if(avail_h < 350)
+            avail_h = 350;
+         var max_stone_size_x = avail_w / this.game.w;
+         var max_stone_size_y = avail_h / this.game.h;
+         var stone_size;
+         if(max_stone_size_x > max_stone_size_y){
+            stone_size = max_stone_size_y;
+         } else {
+            stone_size = max_stone_size_x;
+         }
+         stone_size = Math.floor(stone_size);
+         var calc_canvas_w  =  Math.floor(stone_size * this.game.w);
+         var calc_canvas_h =   Math.floor(stone_size * this.game.h);
+         return {
+            'stone_size': stone_size,
+            'w': calc_canvas_w,
+            'h': calc_canvas_h,
+         };
+      },
+
+      draw : function(){
+         if(!this.getIntermediateCanvas()){
+            alert('no canvas! ' + this.canvas);
+            return;
+         }
+         var view = this;
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         ctx.fillStyle = 'red';
+         //var bg = $("#wood-bg")[0];
+         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142.JPG"};
+         this.images = new Object();
+         this.images.b = new Image();
+         this.images.b.src = this.image_urls["b"];
+         this.images.w = new Image();
+         this.images.w.src = this.image_urls["w"];
+
+         this.images.bg = new Image();
+         this.images.bg.src = this.image_urls['bg'];
+         //necessary nonsense for firefox having usable graphics??
+         this.FOO_CONTAINER = $('<div class="sorta-hidden"/>').append(this.images.bg).append(this.images.b);
+         $('body').append(this.FOO_CONTAINER);
+
+         $(this.FOO_CONTAINER).imagesLoaded( function($images,$proper,$broken){
+            view.game.log( $images.length + ' images total have been loaded' );
+            view.game.log( $proper.length + ' properly loaded images' );
+            view.game.log( $broken.length + ' broken images' );
+            var ctx = view.getIntermediateCanvas().getContext('2d');
+            ctx.drawImage(view.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
+            view.drawLines();
+         });
+      },
+
+      applyDeltaToCanvas : function(delta){
+         var view = this;
+         var removes = delta.remove;
+         var adds = delta.add;
+         $.each(removes, function(){
+            var node = this[1];
+            view.clearNode(node);
+         });
+         $.each(adds, function(){
+            var stone = this[0];
+            var node = this[1];
+            view.dropStone(stone, node);
+         });
+      },
+      dropStone : function(stone, node){
+         if (this.shadow_node)
+            this.eraseShadowStone();
+         var ictx = this.intermediateCanvas.getContext('2d');
+         var fctx = this.finalCanvas.getContext('2d');
+         var point = this.nodeToPoint(node);
+         var stone_img = this.images[stone];
+         ictx.drawImage(stone_img,
+               point[0] - this.node_w/2, point[1]-this.node_h/2,
+               this.node_w, this.node_h);
+         this.redrawNodeOnFinal(node);
+      },
+      redrawNodeOnFinal : function(node){
+         var point = this.nodeToPoint(node);
+         var fctx = this.finalCanvas.getContext('2d');
+         var orig_x = point[0] - this.node_w/2;
+         var orig_y = point[1] - this.node_h/2;
+         var offset_x = this.game.wrap_h ? this.offset_x : 0;
+         var offset_y = this.game.wrap_v ? this.offset_y : 0;
+
+         var cwidth = this.finalCanvas.width;
+         var cheight = this.finalCanvas.height;
+         var new_x = moddd(orig_x + offset_x, cwidth);
+         var new_y = moddd(orig_y + offset_y, cheight);
+         var virtual_nodes = [
+            [new_x, new_y],
+            [new_x, new_y - cheight],
+            [new_x - cwidth, new_y],
+            [new_x - cwidth, new_y - cheight],
+         ];
+         for(var i=0;i<4;i++){
+            fctx.drawImage(this.intermediateCanvas,
+                  orig_x, orig_y,
+                  this.node_w, this.node_h,
+                  virtual_nodes[i][0], virtual_nodes[i][1],
+                  this.node_w, this.node_h);
+         }
+      },
+      redrawFinalWithOffset : function(){
+         var fctx = this.getFinalCanvas().getContext('2d');
+         var offset_x = this.offset_x;
+         var offset_y = this.offset_y;
+         if(this.in_grab){
+            var dispx = this.movex - this.grabx;
+            var dispy = this.movey - this.graby;
+            offset_x += dispx;
+            offset_y += dispy;
+         }
+         if(!this.game.wrap_v)
+            offset_y = 0;
+         if(!this.game.wrap_h)
+            offset_x = 0;
+         var cwidth = this.finalCanvas.width;
+         var cheight= this.finalCanvas.height;
+         var wrapping_offsets = [
+            [moddd(offset_x , cwidth), moddd(offset_y , cheight)],
+            [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)],
+            [moddd(offset_x , cwidth), moddd(offset_y , cheight)-cheight],
+            [moddd(offset_x , cwidth)-cwidth, moddd(offset_y , cheight)-cheight]
+         ];
+         for(var i=0;i<4;i++){   
+            fctx.drawImage(this.intermediateCanvas,
+                  0,0,cwidth,cheight, //src
+                  wrapping_offsets[i][0], wrapping_offsets[i][1], cwidth,cheight); //dest
+         }
+
+      },
+
+
+      // clear shadow stone. replace with empty board section.
+      eraseShadowStone : function(){
+         this.clearNode(this.shadow_node);
+         this.shadow_node = null;
+      },
+      clearNode : function(node){
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         var point = this.nodeToPoint(node);
+         var x = point[0] - this.node_w/2;
+         var y = point[1] - this.node_h/2;
+         ctx.putImageData(this.empty_board_image_data, 
+               0,0,x,y, this.node_w, this.node_h);
+         this.redrawNodeOnFinal(node);
+      },
+      displayShadowStone : function(board_node){
+         var ctx = this.intermediateCanvas.getContext('2d');
+
+         var rm_old = false;
+         var draw_new = false;
+
+         if (board_node != null && this.shadow_node != null){
+            if (board_node[0]!=this.shadow_node[0] || board_node[1]!=this.shadow_node[1]){
+               draw_new = true;
+               rm_old = true;
+            }
+         } else if (board_node == null && this.shadow_node != null){
+            rm_old = true;
+         } else if (board_node != null){
+            draw_new = true;
+         }
+         // don't do shadow if an actual stone is there.
+         var colliding_stone = this.game.getActual_board().getStoneAtNode(board_node);
+         if (colliding_stone)
+            draw_new = false;
+
+         if(rm_old == true) {
+            this.eraseShadowStone();
+         }
+
+         if(draw_new == true) {
+            var point = this.nodeToPoint(board_node);
+            ctx.globalAlpha = .5;
+            ctx.drawImage(this.images[PORTAL_DATA.color],
+               point[0] - this.node_w/2, point[1]-this.node_h/2,
+               this.node_w, this.node_h);
+            this.shadow_node = board_node;
+            ctx.globalAlpha = 1;
+            this.redrawNodeOnFinal(board_node);
+         }
+      },
+      nodeToPoint : function(node){
+         var row = node[0];
+         var col = node[1];
+         var x = this.grid_box[0] + this.grid_w * col / (this.game.w-1);
+         var y = this.grid_box[1] + this.grid_h * row / (this.game.h-1);
+         return [x,y];
+      },
+      canvasXYToNode : function(x,y){
+         var row = -1, col = -1;
+         var reach_x = this.node_w/2;
+         var reach_y = this.node_h/2;
+         if(this.game.wrap_h){
+            x -= this.offset_x;
+            x=moddd(x,this.getFinalCanvas().width);
+         }
+         if(this.game.wrap_v){
+            y -= this.offset_y;
+            y=moddd(y,this.getFinalCanvas().height);
+         }
+         for (i=0;i<this.game.w;i++){
+            var node_x = this.grid_box[0] + i*this.node_w;
+            if( (x > node_x-reach_x) && (x < node_x+reach_x)){
+               col = i;
+               break;
+            }
+         }
+         for (i=0;i<this.game.h;i++){
+            var node_y = this.grid_box[1] + i*this.node_h;
+            if( (y > node_y-reach_y) && (y < node_y+reach_y)){
+               row = i;
+               break;
+            }
+         }
+         if (row == -1 || col == -1){
+            return null;
+         }
+         return [row,col];
+      },
+
+      activate : function(){
+         var view = this;
+         $(this.getFinalCanvas()).mousemove(function(e){
+            if(!view.can_move()) {return;}
+            var point = mouseEventToRelative(e);
+            var boardnode = view.canvasXYToNode(point[0],point[1]);
+            if(!boardnode){ return;}
+            view.displayShadowStone(boardnode);
+         });
+         this.game.openSocket();
+      },
+
+   },
+});
+
+
+
