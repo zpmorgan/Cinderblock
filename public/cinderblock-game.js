@@ -332,6 +332,16 @@ Class ('CinderblockView', {
             else if(c == 'S' || c == 'J'){
                view.offset_y += -20;
             }
+            //   relevantView.virtuallyGoToStart();
+            else if (e.keyCode == 37) { //left arrow
+               relevantView.virtuallyGoBackwards();
+               e.stopPropagation();
+            }
+            else if (e.keyCode == 39) { //right arrow
+               relevantView.virtuallyGoForwards();
+               e.stopPropagation();
+            }
+               //relevantView.virtuallyGoToEnd();
             else {return}
             view.redrawFinalWithOffset();
          });
