@@ -19,6 +19,7 @@ sub mention_on_err_and_close{
          if ($redis->ioloop != Mojo::IOLoop->singleton()){
             warn "stopping extra ioloop?";
             $redis->ioloop->stop;
+            $block_redis = undef;
          }
          #warn "IOLOOP singleton: ". Mojo::IOLoop->singleton();
       });
