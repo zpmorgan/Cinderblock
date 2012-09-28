@@ -602,34 +602,4 @@ Class('CinderblockGame', {
          this.onTotalMovesChange = cb;
       },
    },
-});
-
-function GameZZZ(opts){
-
-   // only board, no stones, imagedata is not a canvas
-   this.empty_board_image_data = null;
-   // only stones: 
-   this.intermediateCanvas = null;
-   // marked & scrolled.
-   this.finalCanvas = null;
-   // rules:
-   this.w = opts.w;
-   this.h = opts.h;
-   this.wrap_v = opts.wrap_v;
-   this.wrap_h = opts.wrap_h;
-
-   // cached offsets for drawing:
-   this.h_lines = [];
-   this.v_lines = [];
-
-   // game data:
-   this.move_events = [];
-   this.actual_board = new GridBoard({w: this.w, h: this.h});
-   this.actual_turn = 'b';
-
-   this.virtual_board = new GridBoard({w: this.w, h: this.h});
-   this.virtualMoveNum = 0;
-   this.onVirtualMoveChange = function(arg){};
-   this.onTotalMovesChange = function(arg){};
-}
-
+}); //end CinderblockGame class
