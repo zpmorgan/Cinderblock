@@ -15,6 +15,8 @@ sub mention_on_err_and_close{
    $redis->on(error => sub{
          my($redis, $error) = @_;
          warn "[REDIS ERROR] $error\n";
+         warn "IOLOOP: ".$redis->ioloop;
+         warn "IOLOOP singleton: ". Mojo::IOLoop->singleton();
       });
    $redis->on(close => sub{ warn "[$nam REDIS] Close.]";});
 }
