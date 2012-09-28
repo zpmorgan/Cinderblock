@@ -102,6 +102,8 @@ Class('CinderblockGame', {
          init:function () { return new GridBoard({w: this.w, h: this.h}) },
       },
       actual_turn : {is:'rw',init:'b'},
+      onNewMoveEvent : function(delta){},
+      onTotalMovesChange : function(new_count){},
    },
    methods: {
       // TODO: numTurns?
@@ -122,24 +124,16 @@ Class('CinderblockGame', {
          this.getActual_board().applyDelta(move_data.delta);
          this.actual_turn = move_data.turn_after;
          this.onNewMoveEvent(move_data); //cb
-         //stuff now in callback? :
-         //this.virtualMoveNum++;
-         //var virtual_move_num = $('#time-slider').slider('value');
-         //if(virtual_move_num == this.move_events.length-1){ 
-            // we're monitoring current state.
-            // so change canvas view automatically
-            //this.applyDeltaToCanvas(move_data.delta);
-            //this.virtualMoveNum ++;
-            //this.onVirtualMoveChange(this.virtualMoveNum);
-         //}
          this.onTotalMovesChange (this.move_events.length);
       },
    
-      // funky callback thing.
+      // funky callback things.
       setOnNewMoveEvent : function(cb){
          this.onNewMoveEvent = cb;
       },
-      onNewMoveEvent : function(delta){},
+      setOnTotalMovesChange : function(cb){
+         this.onTotalMovesChange = cb;
+      },
 
 
       openSocket : function(){
@@ -178,67 +172,6 @@ Class('CinderblockGame', {
          };
          this.sock.send(JSON.stringify(attempt));
       },
-
-
-      virtuallyGoToMove : function(destMoveNum){
-         this.log ('gotomove: '+ this.virtualMoveNum + '->' + destMoveNum);
-         if(destMoveNum == this.virtualMoveNum){
-            return;
-         }
-         if(destMoveNum > this.virtualMoveNum){
-            // go forwards in time
-            while (destMoveNum != this.virtualMoveNum){
-               var event_to_apply = this.move_events[this.virtualMoveNum];
-               this.applyDeltaToCanvas(event_to_apply.delta);
-               this.virtualMoveNum++;
-               //this.log (this.virtualMoveNum+1);
-               //this.log (this.virtualMoveNum);
-            }
-            this.onVirtualMoveChange(this.virtualMoveNum);
-            return;
-         }
-         // go backwards in time
-         if(destMoveNum < this.virtualMoveNum){
-            // go forwards in time
-            while (destMoveNum != this.virtualMoveNum){
-               var event_to_reverse = this.move_events[this.virtualMoveNum-1];
-               var delta = event_to_reverse.delta;
-               var removes = delta.remove;
-               var adds = delta.add;
-               var reversed_delta = {
-                  'add' : removes,
-                  'remove' : adds,
-               };
-               this.applyDeltaToCanvas(reversed_delta);
-               this.virtualMoveNum--;
-            }
-            this.onVirtualMoveChange(this.virtualMoveNum);
-            return;
-         }
-      },
-      virtuallyGoToStart : function(){
-         this.virtuallyGoToMove(0);
-      },
-      virtuallyGoToEnd: function(){
-         this.virtuallyGoToMove(this.move_events.length);
-      },
-      virtuallyGoBackwards : function(){
-         if(this.virtualMoveNum == 0)
-            return;
-         this.virtuallyGoToMove(this.virtualMoveNum-1);
-      },
-      virtuallyGoForwards : function(){
-         if(this.virtualMoveNum == this.move_events.length)
-            return;
-         this.virtuallyGoToMove(this.virtualMoveNum+1);
-      },
-      // funky callbacks
-      setOnVirtualMoveChange : function(cb){
-         this.onVirtualMoveChange = cb;
-      },
-      setOnTotalMovesChange : function(cb){
-         this.onTotalMovesChange = cb;
-      },
    },
 }); //end CinderblockGame class
 
@@ -258,9 +191,8 @@ Class ('CinderblockView', {
       // TODO:to 'view'
       //this.virtual_board = new GridBoard({w: this.game.w, h: this.game.h});
       virtualMoveNum: {is:'rw',init:0},
-      //this.onVirtualMoveChange = function(arg){};
-      //this.onTotalMovesChange = function(arg){};
       canvasFinagled : {is:'rw', required:false},
+      onVirtualMoveChange : function(move_num){},
    },
    methods: {
       canvasWidth:  function(){return this.getFinalCanvas().width},
@@ -313,7 +245,7 @@ Class ('CinderblockView', {
             ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
          //fctx.drawImage(this.intermediateCanvas,0,0); 
          this.redrawFinalWithOffset();
-         this.activate();
+         this.activateGame();
       },
       finagleCanvas : function(cnvs){
          var view = this;
@@ -403,9 +335,10 @@ Class ('CinderblockView', {
 
          this.game.setOnNewMoveEvent(function(move_data){
             if(view.virtualMoveNum == view.game.move_events.length-1){ 
-               view.applyDeltaToCanvas(move_data.delta);
-               view.virtualMoveNum ++;
-               $( "#time-slider" ).slider( "option", "value", view.game.move_events.length );
+               //view.applyDeltaToCanvas(move_data.delta);
+               //view.virtualMoveNum ++;
+               view.virtuallyGoToEnd();
+               //$( "#time-slider" ).slider( "option", "value", view.game.move_events.length );
             }
          });
 
@@ -647,7 +580,7 @@ Class ('CinderblockView', {
          return [row,col];
       },
 
-      activate : function(){
+      activateGame : function(){
          var view = this;
          $(this.getFinalCanvas()).mousemove(function(e){
             if(!view.can_move()) {return;}
@@ -658,7 +591,63 @@ Class ('CinderblockView', {
          });
          this.game.openSocket();
       },
+      setOnVirtualMoveChange : function(cb){
+         this.onVirtualMoveChange = cb;
+      },
 
+      // Time controls
+      virtuallyGoToMove : function(destMoveNum){
+         this.game.log ('gotomove: '+ this.virtualMoveNum + '->' + destMoveNum);
+         if(destMoveNum == this.virtualMoveNum){
+            return;
+         }
+         if(destMoveNum > this.virtualMoveNum){
+            // go forwards in time
+            while (destMoveNum != this.virtualMoveNum){
+               var event_to_apply = this.game.move_events[this.virtualMoveNum];
+               this.applyDeltaToCanvas(event_to_apply.delta);
+               this.virtualMoveNum++;
+               //this.log (this.virtualMoveNum+1);
+               //this.log (this.virtualMoveNum);
+            }
+            this.onVirtualMoveChange(this.virtualMoveNum);
+            return;
+         }
+         // go backwards in time
+         if(destMoveNum < this.virtualMoveNum){
+            // go forwards in time
+            while (destMoveNum != this.virtualMoveNum){
+               var event_to_reverse = this.game.move_events[this.virtualMoveNum-1];
+               var delta = event_to_reverse.delta;
+               var removes = delta.remove;
+               var adds = delta.add;
+               var reversed_delta = {
+                  'add' : removes,
+                  'remove' : adds,
+               };
+               this.applyDeltaToCanvas(reversed_delta);
+               this.virtualMoveNum--;
+            }
+            this.onVirtualMoveChange(this.virtualMoveNum);
+            return;
+         }
+      },
+      virtuallyGoToStart : function(){
+         this.virtuallyGoToMove(0);
+      },
+      virtuallyGoToEnd: function(){
+         this.virtuallyGoToMove(this.game.move_events.length);
+      },
+      virtuallyGoBackwards : function(){
+         if(this.virtualMoveNum == 0)
+            return;
+         this.virtuallyGoToMove(this.virtualMoveNum-1);
+      },
+      virtuallyGoForwards : function(){
+         if(this.virtualMoveNum == this.game.move_events.length)
+            return;
+         this.virtuallyGoToMove(this.virtualMoveNum+1);
+      },
    },
 });
 
