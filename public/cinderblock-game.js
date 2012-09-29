@@ -185,6 +185,7 @@ Class ('CinderblockView', {
       }, 
       finalCanvas : {is:'rw'},// required:true},
       intermediateCanvas: {is:'rw'},
+      extra_w_stones_acquired: {is:'rw',init:false},
       // cached offsets for drawing:
       h_lines : {is:'ro',init:function(){return []}},
       v_lines : {is:'ro',init:function(){return []}},
@@ -408,7 +409,10 @@ Class ('CinderblockView', {
          this.images.bg = new Image();
          this.images.bg.src = this.image_urls['bg'];
          //necessary nonsense for firefox having usable graphics??
-         this.FOO_CONTAINER = $('<div class="sorta-hidden"/>').append(this.images.bg).append(this.images.b);
+         this.FOO_CONTAINER = $('<div class="sorta-hidden"/>')
+            .append(this.images.bg)
+            .append(this.images.w)
+            .append(this.images.b);
          $('body').append(this.FOO_CONTAINER);
 
          $(this.FOO_CONTAINER).imagesLoaded( function($images,$proper,$broken){
@@ -418,7 +422,37 @@ Class ('CinderblockView', {
             var ctx = view.getIntermediateCanvas().getContext('2d');
             ctx.drawImage(view.images.bg,0,0, ctx.canvas.width * 1.1111,ctx.canvas.height * 1.1111);
             view.drawLines();
+            view.acquire_extra_graphics();
          });
+      },
+
+      // constant for the same i & the same incarnation of the view... lame & ad-hoc.
+      random_w_stone_img: function(i){
+      //   alert(i);
+         if(!this.extra_w_stones_acquired)
+            return this.images.w;
+         if(!this.lambdphli)
+            this.lambdphli = Math.floor(Math.random()*100) + 33;
+         var i = moddd(i, this.lambdphli);
+         i = moddd(i,15);
+         return this.extra_w_stones[i];
+      },
+      acquire_extra_graphics : function(){
+         var view = this;
+         this.extra_w_stones = [];
+         this.BAR_CONTAINER = $('<div class="sorta-hidden"/>');
+         for(var i=1; i<=15; i++){
+            var url = '/w'+i+'.png';
+            var img = new Image();
+            img.src = url;
+            this.extra_w_stones.push(img);
+            this.BAR_CONTAINER.append(img);
+         }
+         $(this.BAR_CONTAINER).imagesLoaded( function($images,$proper,$broken){
+            view.extra_w_stones_acquired = true;
+            view.game.log($images +' imgs, broken: '+$broken);
+         });
+         $('body').append(this.BAR_CONTAINER);
       },
 
       applyDeltaToCanvas : function(delta){
@@ -442,6 +476,8 @@ Class ('CinderblockView', {
          var fctx = this.finalCanvas.getContext('2d');
          var point = this.nodeToPoint(node);
          var stone_img = this.images[stone];
+         if(stone=='w')
+            stone_img = this.random_w_stone_img(node[0]*47 + node[1]*61);
          ictx.drawImage(stone_img,
                point[0] - this.node_w/2, point[1]-this.node_h/2,
                this.node_w, this.node_h);
