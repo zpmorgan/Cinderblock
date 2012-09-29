@@ -72,6 +72,9 @@
             //$('#time-slider').slider("option", "value", move_num);
             $("#time-machine-total-moves").text(total_moves);
             $('#time-slider').slider("option", "max", total_moves);
+            if(relevantGame.timeSinceInitializedInMs() >= 1000){
+               relevantView.playMoveSound();
+            }
             });
       });
    $(document).ready(function(){
@@ -89,6 +92,13 @@
             });
       });
 
+$(document).ready(function(){
+      var audioElement = $("<audio src='/27826__erdie__sword01.ogg' id='stone-sound' />");
+         //document.createElement('audio');
+      //audioElement.setAttribute('src', '/27826__erdie__sword01.ogg');
+      $('body').append(audioElement);
+      //audioElement[0].play();
+      });
 </script>
 
 %# MAIN SECTION

@@ -28,10 +28,12 @@ sub welcome{
 
 sub new_game{
    my $self = shift;
-   my $w = $self->param('w') // 19;
-   my $h = $self->param('h') // 19;
-   die if $w<2 or $w>30;
-   die if $h<2 or $h>30;
+   my $w = int($self->param('w')) // 19;
+   my $h = int($self->param('h')) // 19;
+   if (($w<1) or ($w>30) or ($h<1) or ($h>30)){
+      $self->stash(msg => 'height and width must be from 2 to 30'); 
+      return $self->render(template => 'game/new_game_form');
+   };
    my $wrap_v = $self->param('wrap_v') ? 1 : 0;
    my $wrap_h = $self->param('wrap_h') ? 1 : 0;
 

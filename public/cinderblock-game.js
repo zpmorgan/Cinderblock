@@ -152,6 +152,9 @@ Class('CinderblockGame', {
          };
          conn.onopen = function () {
             game.log('Socket open');
+            if(!game.time_initialized){
+               game.time_initialized = Date.now();
+            }
          };
          conn.onclose = function () {
             game.log('Socket close');
@@ -171,6 +174,11 @@ Class('CinderblockGame', {
             }
          };
          this.sock.send(JSON.stringify(attempt));
+      },
+      timeSinceInitializedInMs : function(){
+         if(!this.time_initialized)
+            return -1;
+         return Date.now() - this.time_initialized ;
       },
    },
 }); //end CinderblockGame class
@@ -737,6 +745,11 @@ Class ('CinderblockView', {
          if(this.virtualMoveNum == this.game.move_events.length)
             return;
          this.virtuallyGoToMove(this.virtualMoveNum+1);
+      },
+      
+      playMoveSound : function(){
+         var audioElement = $("audio#stone-sound");
+         audioElement[0].play();
       },
    },
 });

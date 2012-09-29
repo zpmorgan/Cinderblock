@@ -12,6 +12,21 @@ div.tinyheadercenter{
    margin: 0 auto;
 }
 
+.msg-wrap{
+   display: block;
+   text-align:center;
+}
+.msg{
+   color: #d0d0d0;
+   background: #381818;
+   margin: 0 auto;
+   max-width: 45%;
+   display: inline-block;
+   border:2px solid black;
+   padding: 3px;
+   font-size: 25px;
+}
+
 .colors-light-on-dark {
    color: #cccccc;
    background: #113322;
