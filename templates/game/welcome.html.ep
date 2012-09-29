@@ -48,7 +48,7 @@
 </script>
 
 <div class="wrapperblock ">
-   <div style="height: 100px; display:block;margin:0 auto"> </div>
+   <div style="height: 40px; display:block;margin:0 auto"> </div>
    <div class="welcome rounded-corners colors-light-on-dark">
       The Cinderblock Go Server is capable of realtime or correspondence-style
       Go games on a planar, cylindrical, or toroidal board. It supports board

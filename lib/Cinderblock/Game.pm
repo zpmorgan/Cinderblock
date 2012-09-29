@@ -254,9 +254,15 @@ sub sadchat{
          my($redis, $error) = @_;
          warn "[sub_REDIS] CLOSE...\n";
       });
-   #$sub_redis->protocol_redis("Protocol::Redis::XS");
-   #$sub_redis->timeout(180000);
    $self->stash(sub_redis => $sub_redis);
+
+   $self->getset_redis->lrange('sadchat_messages', 0, 100, sub{
+         my ($redis, $res) = @_;
+         for my $m (reverse @$res){
+            my $past_msg = {text => $m};
+            $self->pub_redis->publish('sadchat', $json->encode($past_msg));
+         }
+      });
    # push sad msg events when they come down the tube.
    $sub_redis->subscribe('sadchat' => sub{
          my ($redis, $event) = @_;
@@ -265,7 +271,6 @@ sub sadchat{
       });
    $self->on(message => sub {
          my ($ws, $msg) = @_;
-         say "Message: $msg";
          my $msg_data = $json->decode($msg);
          if($msg_data->{type} eq 'ping'){
             $ws->send($json->encode({type=>'pong'}));
@@ -274,12 +279,17 @@ sub sadchat{
          if($msg_data->{type} eq 'pong'){
             return;
          }
+         say "Message?: $msg";
+
          # not ping, not pong. so text...
          my $text = $msg_data->{text};
          return if length($text) > 400 or $text eq '';
+         # push to a redis queue which stores last 100 msgs.
+         # most recent first..
+         $self->getset_redis->lpush(sadchat_messages => $text);
+         $self->getset_redis->ltrim(sadchat_messages => 0,99);
          my $out_msg = {text => $text};
          $self->pub_redis->publish('sadchat', $json->encode($out_msg));
-         #$ws->send($json->encode($out_msg));
       });
 }
 
