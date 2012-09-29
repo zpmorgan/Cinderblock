@@ -1,6 +1,51 @@
 % layout 'foo_layout',
+
+<script type="text/javascript">
+   var chat_sock;
+   $(document).ready(function(){
+      var sock_url = "<%= ws_url_base() %>/sadchat";
+      chat_sock = new WebSocket(sock_url);
+      chat_sock.onmessage = function  (event) {
+         var msg = $.parseJSON(event.data);
+         if(msg.type == 'ping'){
+            chat_sock.send('{"type": "pong"}');
+            return;
+         }
+         if(msg.type == 'pong')
+            return;
+         spew_msg_to_some_div(msg.text);
+      };
+      chat_sock.onopen = function () {
+         spew_msg_to_some_div('connected...');
+         var msg_field = $('#new-msg-input');
+         msg_field.keypress(function(e){
+            if (e.which == 13){ // 'enter'
+               if ($(this).val() == '')
+                  return;
+               var sad_text = $(this).val();
+               $(this).val('');
+               var meta_msg = {
+                  type : 'new_msg_request',
+                  text : sad_text,
+               };
+               chat_sock.send(JSON.stringify(meta_msg));
+            }
+         });
+         var PINGS = setInterval(function(){
+            chat_sock.send('{"type": "ping"}');
+         }, 10000);
+      };
+   });
+   function spew_msg_to_some_div(msg_text){
+      var msgbox = $('#sad-msg-box');
+      var msgdiv = $('<div />');
+      msgdiv.text(msg_text);
+      msgbox.prepend(msgdiv);
+   }
+</script>
+
 <div class="wrapperblock ">
-   <div style="height: 200px; display:block;margin:0 auto"> </div>
+   <div style="height: 100px; display:block;margin:0 auto"> </div>
    <div class="welcome rounded-corners colors-light-on-dark">
       The Cinderblock Go Server is capable of realtime or correspondence-style
       Go games on a planar, cylindrical, or toroidal board. It supports board
@@ -10,4 +55,8 @@
       <br />
       <a href="http://cinderblock.zpmorgan.com/game/29">Example game</a>
    </div>
+   <h3 style="color:#ccc;"> Sad little chat box: </h3>
+   <div id="sad-msg-box"> </div>
+   <br />
+   <input type="text" spellcheck="false" id="new-msg-input" maxlength="500">
 </div>

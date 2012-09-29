@@ -164,3 +164,24 @@ a:visited, a:hover {
 a:active {
    color: #aaaaaa;
 }
+
+
+#sad-msg-wrap{
+   display: block;
+   text-align:center;
+}
+#sad-msg-box {
+   color: #d0d0d0;
+   background: #381818;
+   margin: 0 auto;
+   max-width: 45%;
+   display: inline-block;
+   border:2px solid black;
+   padding: 3px;
+   font-size: 25px;
+
+}
+#sad-msg-box div {
+   margin: 7px;
+   border:2px solid black;
+}

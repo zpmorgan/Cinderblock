@@ -241,4 +241,46 @@ sub publish_move_event{
    $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
 }
 
+sub sadchat{
+   my $self = shift;
+   my $ws = $self->tx;
+   my $sub_redis = Mojo::Redis->new(timeout => 2*3600);
+   $sub_redis->timeout(2*3600);
+   $sub_redis->on(error => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS ERROR] $error\n";
+      });
+   $sub_redis->on(close => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS] CLOSE...\n";
+      });
+   #$sub_redis->protocol_redis("Protocol::Redis::XS");
+   #$sub_redis->timeout(180000);
+   $self->stash(sub_redis => $sub_redis);
+   # push sad msg events when they come down the tube.
+   $sub_redis->subscribe('sadchat' => sub{
+         my ($redis, $event) = @_;
+         return if $event->[0] eq 'subscribe';
+         $ws->send($event->[2]);
+      });
+   $self->on(message => sub {
+         my ($ws, $msg) = @_;
+         say "Message: $msg";
+         my $msg_data = $json->decode($msg);
+         if($msg_data->{type} eq 'ping'){
+            $ws->send($json->encode({type=>'pong'}));
+            return;
+         }
+         if($msg_data->{type} eq 'pong'){
+            return;
+         }
+         # not ping, not pong. so text...
+         my $text = $msg_data->{text};
+         return if length($text) > 400 or $text eq '';
+         my $out_msg = {text => $text};
+         $self->pub_redis->publish('sadchat', $json->encode($out_msg));
+         #$ws->send($json->encode($out_msg));
+      });
+}
+
 1;

@@ -80,12 +80,22 @@ sub startup {
       $app->mention_on_err_and_close($pub_redis, 'pub_redis');
       return $pub_redis;
    });
+   $self->helper (ws_url_base => sub{
+         my $self = shift;
+         my $ws_url_base = $self->req->url->base;
+         $ws_url_base =~ s/^http/ws/;
+         unless ($ws_url_base =~ /:\d\d/) {
+            $ws_url_base =~ s|/game/|:3333/game/|;
+         }
+         return $ws_url_base;
+      });
 
    # Router
    my $r = $self->routes;
 
    # Normal route to controller
    $r->get('/')->to('game#welcome');
+   $r->websocket('/sadchat/')->to('game#sadchat');
    $r->get('/new_game/')->to('game#new_game_form');
    $r->post('/new_game/')->to('game#new_game');
    $r->get('/invite/:invite_code/')->to('game#be_invited');
