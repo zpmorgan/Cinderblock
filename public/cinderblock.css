@@ -174,14 +174,17 @@ a:active {
    color: #d0d0d0;
    background: #381818;
    margin: 0 auto;
-   max-width: 45%;
+   max-width: 40em;
+   min-width: 20em;
+   height: 300px;
    display: inline-block;
    border:2px solid black;
-   padding: 3px;
-   font-size: 25px;
+   padding: 2px;
+   overflow-y:scroll;
+   font-size: 15px;
 
 }
 #sad-msg-box div {
-   margin: 7px;
+   margin: 2px;
    border:2px solid black;
 }

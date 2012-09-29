@@ -458,7 +458,7 @@ Class ('CinderblockView', {
          }
          $(this.BAR_CONTAINER).imagesLoaded( function($images,$proper,$broken){
             view.extra_w_stones_acquired = true;
-            view.game.log($images +' imgs, broken: '+$broken);
+            view.game.log($images.length +' imgs, broken: '+$broken.length);
          });
          $('body').append(this.BAR_CONTAINER);
       },
