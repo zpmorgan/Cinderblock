@@ -85,7 +85,7 @@ sub startup {
          my $ws_url_base = $self->req->url->base;
          $ws_url_base =~ s/^http/ws/;
          unless ($ws_url_base =~ /:\d\d/) {
-            $ws_url_base =~ s|/game/|:3333/game/|;
+            $ws_url_base =~ s|$|:3333|;
          }
          return $ws_url_base;
       });
