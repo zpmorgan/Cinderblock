@@ -241,6 +241,7 @@ sub publish_move_event{
    $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
 }
 
+# Websocket.
 sub sadchat{
    my $self = shift;
    my $ws = $self->tx;

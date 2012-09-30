@@ -251,6 +251,17 @@ Class ('CinderblockView', {
          }
          ctx.stroke();
          ctx.closePath();
+         // star points?
+         if(this.game.h == 19 && this.game.w == 19){
+            var nodes = [[3,3],[15,15], [15,3], [3,15], [9,9],
+               [3,9],[9,3],[9,15],[15,9]];
+            var star_size = view.canvasWidth() / 70;
+            $.each(nodes,function(){
+               ctx.fillStyle   = '#000';
+               var pt = view.nodeToPoint(this);
+               ctx.fillRect(pt[0]-star_size/2, pt[1]-star_size/2, star_size,star_size);
+            });
+         }
          ctx.restore();
          //copy empty board to paste over removed stuff.
          this.empty_board_image_data = 
@@ -259,6 +270,8 @@ Class ('CinderblockView', {
          this.redrawFinalWithOffset();
          this.activateGame();
       },
+
+
       finagleCanvas : function(cnvs){
          var view = this;
          this.setFinalCanvas (cnvs);
@@ -408,6 +421,8 @@ Class ('CinderblockView', {
          ctx.fillStyle = 'red';
          //var bg = $("#wood-bg")[0];
          this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142-vertical.JPG"};
+         //http://www.flickr.com/photos/wwarby/6963362742/in/set-72157625097924639/
+         //this.image_urls = {w:"/w.png",b:"/b.png",bg:"/birch_tex.jpg"};
          this.images = new Object();
          this.images.b = new Image();
          this.images.b.src = this.image_urls["b"];
