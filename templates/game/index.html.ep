@@ -117,6 +117,11 @@
             <div class="tcontrol" id="fforwb"> </div>
          </div>
       </div>
+         % if ($game->{wrap_h} or $game->{wrap_v}){
+            <div id="hint">
+               Scroll the board with WASD or by dragging with the right mouse button.
+            </div>
+         % }
    </div>
 
    %# BOARD
