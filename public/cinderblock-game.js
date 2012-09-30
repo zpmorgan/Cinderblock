@@ -684,6 +684,7 @@ Class ('CinderblockView', {
             view.displayShadowStone(boardnode);
          });
          this.game.openSocket();
+         this.loadMoveSound();
       },
       setOnVirtualMoveChange : function(cb){
          this.onVirtualMoveChange = cb;
@@ -747,8 +748,18 @@ Class ('CinderblockView', {
          this.virtuallyGoToMove(this.virtualMoveNum+1);
       },
       
+      loadMoveSound : function(){
+         for(var i=0;i<3; i++){ //3 'channels'
+            var audioElement = 
+               $("<audio class='stone-sound' src='/27826__erdie__sword01.ogg' id='stone-sound-"+i+"' />");
+            $('body').append(audioElement);
+         }
+         this.audio_play_count = 0;
+      },
       playMoveSound : function(){
-         var audioElement = $("audio#stone-sound");
+         var i = this.audio_play_count++;
+         i=i%3; //bleh.
+         var audioElement = $("audio#stone-sound-"+i);
          audioElement[0].play();
       },
    },

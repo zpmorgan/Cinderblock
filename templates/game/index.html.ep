@@ -88,13 +88,6 @@
             });
       });
 
-$(document).ready(function(){
-      var audioElement = $("<audio src='/27826__erdie__sword01.ogg' id='stone-sound' />");
-         //document.createElement('audio');
-      //audioElement.setAttribute('src', '/27826__erdie__sword01.ogg');
-      $('body').append(audioElement);
-      //audioElement[0].play();
-      });
 </script>
 
 %# MAIN SECTION
