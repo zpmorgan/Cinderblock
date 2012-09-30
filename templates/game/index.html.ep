@@ -18,12 +18,8 @@
 
 <script type="text/javascript">
    % my $game = stash 'game';
-   //   ws://127.0.0.1:3000/game/
-   % my $ws_url = $self->req->url->base .'/game/'. stash('game_id') . '/sock';
-   % $ws_url =~ s/^http/ws/;
-   % unless ($ws_url =~ /:\d\d\d/) {
-      % $ws_url =~ s|/game/|:3333/game/|;
-   % }
+   //   ws://127.0.0.1:3000/game/4/sock:
+   % my $ws_url = ws_url_base().'/game/'. stash('game_id') . '/sock';
    var PORTAL_DATA = {
       game_id: <%=stash('game_id')%>,
       ws_url: "<%= $ws_url %>",
