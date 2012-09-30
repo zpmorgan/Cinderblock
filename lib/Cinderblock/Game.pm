@@ -28,7 +28,8 @@ sub welcome{
 sub activity{ # show recently active games.
    my $self = shift;
    my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', -50,-1);
-   $self->stash(recently_active => $actives);
+   $self->getset_redis(ZREMRANGE => 'recently_actives_game_ids', 0,-50);
+   $self->stash(recently_active_games => $actives);
    $self->render(template => 'game/activity');
 }
 
@@ -233,7 +234,7 @@ sub attempt_move{
          };
          push @{$game->{move_events}}, $new_event;
          if (@{$game->{move_events}} > 3){ # active enough.
-            #   $self->redis_block(recently_actives_game_ids)
+            $self->getset_redis->zadd(recently_actives_game_ids => time, $game_id);
          }
 
          $redis->set("game:$game_id", $json->encode($game) => sub{$redis1});

@@ -8,8 +8,14 @@ div.tinyheader{
 div.tinyheadercenter{
    display:inline-block;
    height:100%;
-   background: #BBEEBB;
    margin: 0 auto;
+}
+div.tinyheadercenter a{
+   background: #334433;
+   color: #ddd;
+   padding: 2px 4px;
+   margin : 0 4px;
+   text-decoration: none;
 }
 
 .msg-wrap{

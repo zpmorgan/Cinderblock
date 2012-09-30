@@ -96,6 +96,7 @@ sub startup {
    # Normal route to controller
    $r->get('/')->to('game#welcome');
    $r->websocket('/sadchat/')->to('game#sadchat');
+   $r->get('/activity/')->to('game#activity');
    $r->get('/new_game/')->to('game#new_game_form');
    $r->post('/new_game/')->to('game#new_game');
    $r->get('/invite/:invite_code/')->to('game#be_invited');

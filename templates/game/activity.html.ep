@@ -1,0 +1,21 @@
+% layout 'foo_layout',
+
+<script type="text/javascript">
+</script>
+
+<div class="wrapperblock ">
+   <div style="height: 40px; display:block;margin:0 auto"> </div>
+   <div class="welcome rounded-corners colors-light-on-dark">
+      <h3>Recently active games:</h3>
+      % my $game_url_base = $self->req->url->base . '/game/';
+      % my $actives = stash 'recently_active_games';
+      <ul>
+         %for my $g_id (@$actives){
+            % my $url = $game_url_base . $g_id;
+            <li>
+            <a href="<%=$url%>"> <%=$g_id%> </a>
+            </li>
+         % }
+      </ul>
+   </div>
+</div>

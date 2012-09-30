@@ -12,6 +12,7 @@
       <div class="tinyheader">
          <div class="tinyheadercenter">
             <a href="/new_game">New game</a>
+            <a href="/activity">Activity</a>
          </div>
       </div>
       % if(stash 'msg'){
