@@ -288,6 +288,7 @@ sub sadchat{
          # most recent first..
          $self->getset_redis->lpush(sadchat_messages => $text);
          $self->getset_redis->ltrim(sadchat_messages => 0,99);
+         $self->getset_redis->lpush(sadchat_messages_all => $text);#archive?
          my $out_msg = {text => $text};
          $self->pub_redis->publish('sadchat', $json->encode($out_msg));
       });
