@@ -170,7 +170,7 @@ Class('CinderblockGame', {
             action: 'attempt_move',
             move_attempt: {
                "node" : node,
-               "stone": PORTAL_DATA.color,
+               "stone": this.actual_turn, //XXX
             }
          };
          this.sock.send(JSON.stringify(attempt));
@@ -210,11 +210,15 @@ Class ('CinderblockView', {
       can_move : function(){
          if(PORTAL_DATA.role == 'watcher')
             return 0;
-         if (this.game.actual_turn != PORTAL_DATA.color)
-            return 0;
          if(this.virtualMoveNum != this.game.move_events.length)
             return 0;
-         return 1;
+         var turn = this.game.actual_turn;
+         var can_move = 0;
+         $.each(PORTAL_DATA.colors, function(){
+            if (this == turn)
+               can_move = 1;
+         }); 
+         return can_move;
       },
 
 
@@ -647,7 +651,7 @@ Class ('CinderblockView', {
          if(draw_new == true) {
             var point = this.nodeToPoint(board_node);
             ctx.globalAlpha = .5;
-            ctx.drawImage(this.images[PORTAL_DATA.color],
+            ctx.drawImage(this.images[this.game.actual_turn], //PORTAL_DATA.color], //XXX
                point[0] - this.node_w/2, point[1]-this.node_h/2,
                this.node_w, this.node_h);
             this.shadow_node = board_node;

@@ -29,7 +29,7 @@
       game_wrap_h: <%=$game->{wrap_h} ? 1 : 0%>,
       % if (stash('my_role') eq 'player') {
          role:  'player',
-         color:  '<%=stash('my_color')%>',
+                colors: [ <%== join ',', map {"'" . $_ . "'"} @{stash('my_colors')} %> ],
       % } else {
          role:  'watcher',
       % }

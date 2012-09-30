@@ -115,18 +115,21 @@ sub do_game{
    $self->stash(game => $game);
 
    # what part does this session play? Watcher or player?
-   $self->stash(my_role => 'watcher');
+   # $self->stash(my_role => 'watcher');
+   my @my_colors;
+   my $my_role = 'watcher';
    for my $role_color(keys %roles){
       if($roles{$role_color} == $sessid){
-         $self->stash(my_role => 'player');
-         $self->stash(my_color => $role_color);
-         last;
+         $my_role = 'player';
+         push @my_colors, $role_color;
       }
    }
+   $self->stash(my_role => $my_role);
+   $self->stash(my_colors => \@my_colors);
    if( keys %roles == 1 ){ #currently only one player ?
       if ($self->stash('my_role') eq 'player'){
          #generate an invite code.
-         my $other_color = ($self->stash('my_color')eq'b') ?'w':'b';
+         my $other_color = ($self->stash('my_colors')->[0] eq'b') ?'w':'b';
          my $invitecode = int rand(2<<30);
          my $invite = {game_id => $game_id, color => $other_color};
          my $timeout = 10000;
