@@ -407,7 +407,7 @@ Class ('CinderblockView', {
          var ctx = this.getIntermediateCanvas().getContext('2d');
          ctx.fillStyle = 'red';
          //var bg = $("#wood-bg")[0];
-         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142.JPG"};
+         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142-vertical.JPG"};
          this.images = new Object();
          this.images.b = new Image();
          this.images.b.src = this.image_urls["b"];
