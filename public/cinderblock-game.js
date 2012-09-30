@@ -255,11 +255,16 @@ Class ('CinderblockView', {
          if(this.game.h == 19 && this.game.w == 19){
             var nodes = [[3,3],[15,15], [15,3], [3,15], [9,9],
                [3,9],[9,3],[9,15],[15,9]];
-            var star_size = view.canvasWidth() / 70;
+            var star_r = view.canvasWidth() / 110;
             $.each(nodes,function(){
                ctx.fillStyle   = '#000';
                var pt = view.nodeToPoint(this);
-               ctx.fillRect(pt[0]-star_size/2, pt[1]-star_size/2, star_size,star_size);
+               ctx.beginPath();
+               ctx.moveTo(pt[0]+star_r, pt[1]);
+               ctx.arc(pt[0], pt[1] , star_r, 0, Math.PI*2, true); 
+               ctx.closePath();
+               ctx.fill();
+               //ctx.fillRect(pt[0]-star_size/2, pt[1]-star_size/2, star_size,star_size);
             });
          }
          ctx.restore();

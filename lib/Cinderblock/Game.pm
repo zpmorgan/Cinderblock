@@ -25,6 +25,12 @@ sub welcome{
    my $self = shift;
    $self->render(template => 'game/welcome');
 }
+sub activity{ # show recently active games.
+   my $self = shift;
+   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', -50,-1);
+   $self->stash(recently_active => $actives);
+   $self->render(template => 'game/activity');
+}
 
 sub new_game{
    my $self = shift;
@@ -226,6 +232,9 @@ sub attempt_move{
             turn_after => $game->{turn},
          };
          push @{$game->{move_events}}, $new_event;
+         if (@{$game->{move_events}} > 3){ # active enough.
+            #   $self->redis_block(recently_actives_game_ids)
+         }
 
          $redis->set("game:$game_id", $json->encode($game) => sub{$redis1});
          $self->publish_move_event($new_event);
