@@ -170,7 +170,7 @@ Class('CinderblockGame', {
             action: 'attempt_move',
             move_attempt: {
                "node" : node,
-               "stone": this.actual_turn, //XXX
+               "stone": this.actual_turn,
             }
          };
          this.sock.send(JSON.stringify(attempt));
@@ -651,7 +651,7 @@ Class ('CinderblockView', {
          if(draw_new == true) {
             var point = this.nodeToPoint(board_node);
             ctx.globalAlpha = .5;
-            ctx.drawImage(this.images[this.game.actual_turn], //PORTAL_DATA.color], //XXX
+            ctx.drawImage(this.images[this.game.actual_turn],
                point[0] - this.node_w/2, point[1]-this.node_h/2,
                this.node_w, this.node_h);
             this.shadow_node = board_node;

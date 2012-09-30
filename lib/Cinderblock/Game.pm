@@ -60,6 +60,10 @@ sub new_game{
    # assign player role to $self->session
    my $color = (rand>.5) ? 'b' : 'w';
    $self->set_game_player(game_id => $game_id, color => $color, sessid => $sessid);
+   if($self->param('play_against') eq 'self'){
+      my $other_color = ($color eq 'b' ? 'w' : 'b');
+      $self->set_game_player(game_id => $game_id, color => $other_color, sessid => $sessid);
+   }
    
    $self->redirect_to("/game/$game_id");
    $self->render(text => 'phoo');

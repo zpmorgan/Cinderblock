@@ -14,6 +14,10 @@
       <label for="wrap_h"> wrap horizontal</label>
       %= check_box wrap_h => 1
       <br />
+      % param play_against => 'invitation' unless param 'play_against';
+      <%= radio_button play_against => 'invitation' %> Invite an opponent
+      <%= radio_button play_against => 'self'  %> Sandbox
+      <br />
       %= submit_button
       % end;
 
