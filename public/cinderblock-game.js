@@ -259,7 +259,7 @@ Class ('CinderblockView', {
          if(this.game.h == 19 && this.game.w == 19){
             var nodes = [[3,3],[15,15], [15,3], [3,15], [9,9],
                [3,9],[9,3],[9,15],[15,9]];
-            var star_r = view.canvasWidth() / 110;
+            var star_r = view.canvasWidth() / 180;
             $.each(nodes,function(){
                ctx.fillStyle   = '#000';
                var pt = view.nodeToPoint(this);
