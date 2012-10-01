@@ -280,8 +280,10 @@ Class ('CinderblockView', {
          ctx.save();
          ctx.beginPath();
          for(var i=0;i<this.game.w;i++){
-            var p = i / (this.game.w-1);
-            var x = grid_box[0] + (p * this.grid_w)
+            var pt = view.nodeToPoint([0,i]);
+            //var p = i / (this.game.w-1);
+            //var x = grid_box[0] + (p * this.grid_w)
+            var x = pt[0];
             this.v_lines[i] = x;
             ctx.lineWidth = 1.2;
             ctx.moveTo(x, topppp);
@@ -289,8 +291,10 @@ Class ('CinderblockView', {
          }
          // h lines
          for(var i=0;i<this.game.h;i++){
-            var p = i / (this.game.h-1);
-            var y = grid_box[1] + (p * this.grid_h);
+            var pt = view.nodeToPoint([i,0]);
+            //var p = i / (this.game.h-1);
+            //var y = grid_box[1] + (p * this.grid_h);
+            var y = pt[1];
             this.h_lines[i] = y;
             ctx.lineWidth = 1.2;
             ctx.moveTo(lefttt, y);
@@ -340,8 +344,9 @@ Class ('CinderblockView', {
          this.grid_box = grid_box;
          this.grid_w = grid_box[2] - grid_box[0];
          this.grid_h = grid_box[3] - grid_box[1];
-         this.node_w = this.grid_w / (this.game.w-1);
-         this.node_h = this.grid_h / (this.game.h-1);
+         this.node_w = this.calc_stone_size; //this.grid_w / (this.game.w-1);
+         this.node_h = this.calc_stone_size; //this.grid_w / (this.game.w-1);
+         //this.node_h = this.grid_h / (this.game.h-1);
 
          var ic = $('<canvas />')[0];
          this.setIntermediateCanvas(ic);
@@ -547,6 +552,7 @@ Class ('CinderblockView', {
          var ictx = this.intermediateCanvas.getContext('2d');
          var fctx = this.finalCanvas.getContext('2d');
          var point = this.nodeToPoint(node);
+         //alert(node[0] +','+ node[1] +'||'+ point[0] +','+ point[1]);
          var stone_img = this.images[stone];
          if(stone=='w')
             stone_img = this.random_w_stone_img(node[0]*47 + node[1]*61);
@@ -704,8 +710,17 @@ Class ('CinderblockView', {
       nodeToPoint : function(node){
          var row = node[0];
          var col = node[1];
-         var x = this.grid_box[0] + this.grid_w * col / (this.game.w-1);
-         var y = this.grid_box[1] + this.grid_h * row / (this.game.h-1);
+         //var x = this.grid_box[0] + this.grid_w * col / (this.game.w-1);
+         //var y = this.grid_box[1] + this.grid_h * row / (this.game.h-1);
+         if(typeof (col) == 'string')
+            col = node[1] = parseInt(col);
+         if(typeof (row) == 'string')
+            row = node[0] = parseInt(row);
+         //   alert('col should be number, but is a '+ typeof(col));
+         var x = this.node_w * (col + .5);
+         var y = this.node_h * (row + .5);
+         
+         //alert(col +','+ row +'||'+ x +','+ y + '[<{}>] '+ this.node_w);
          return [x,y];
       },
       canvasXYToNode : function(x,y){
