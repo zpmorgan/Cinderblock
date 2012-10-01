@@ -105,6 +105,7 @@ Class('CinderblockGame', {
       actual_turn : {is:'rw',init:'b'},
       onNewGameEvent : function(delta){},
       onTotalMovesChange : function(new_count){},
+      onGameEnd : function(e){},
    },
    methods: {
       // TODO: numTurns?
@@ -135,15 +136,18 @@ Class('CinderblockGame', {
          this.onTotalGameEventsChange (this.game_events.length);
       },
       handleResignEvent : function(re){
-         alert('resign');
          this.game_events.push(re);
          //this.getActual_board().applyDelta(move_event.delta);
          this.actual_turn = re.turn_after;
          this.onNewGameEvent(re); //cb
          this.onTotalGameEventsChange (this.game_events.length);
+         this.onGameEnd(re); //cb
       },
    
       // funky callback things.
+      setOnGameEnd : function(cb){
+         this.onGameEnd = cb;
+      },
       setOnNewGameEvent : function(cb){
          this.onNewGameEvent = cb;
       },

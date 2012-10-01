@@ -72,8 +72,6 @@
                relevantView.playMoveSound();
             }
             });
-      });
-   $(document).ready(function(){
          $("#bbackb").click(function(){
             relevantView.virtuallyGoToStart();
             });
@@ -87,6 +85,14 @@
             relevantView.virtuallyGoToEnd();
             });
       });
+   $(document).ready(function(){
+      relevantGame.setOnGameEnd(function(end_event){
+         var result_div = $('<div class="left-panel-controls" />');
+         result_div.text(end_event.winner.toUpperCase() + '+Resign');
+         result_div.css('font-weight', 'bold');
+         $('#logoblock').after(result_div);
+      });
+   });
    $(document).ready(function(){
       if(PORTAL_DATA.role == 'player'){
          $('#pass-button').click(function(){
@@ -105,7 +111,7 @@
 <div class="cinderblock">
    <div class="fooblock"> </div>
    <div class="leftoblock">
-      <h2> Cinderblock </h2>
+      <h2 id="logoblock"> Cinderblock </h2>
       % if (stash 'invite_code'){
          <div id="invite-url" class='left-panel-controls'> 
             % my $url = $self->req->url->base . "/invite/" . stash('invite_code');

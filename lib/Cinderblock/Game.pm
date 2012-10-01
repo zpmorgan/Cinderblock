@@ -302,9 +302,19 @@ sub attempt_resign{
       my $color = $msg->{resign_attempt}{color};
       my $roles = $self->players_in_game($game_id);
       return unless ($roles->{$color} == $self->sessid);
-      # allow resign out of turn.
-      # my $turn = $game->{turn};
-      # return unless $color eq $turn; 
+      $game->{turn} = '';
+      $game->{status} = 'finished';
+      $game->{winner} = ($color eq 'b') ? 'w' : 'b';
+      my $event = {
+         type => 'resign', 
+         color => $color,
+         turn_after => '', 
+         time => time,
+         winner => $game->{winner},
+      };
+      push @{$game->{game_events}}, $event;
+      $redis->set("game:$game_id", $json->encode($game));
+      $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
    });
 }
 
