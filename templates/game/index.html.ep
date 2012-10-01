@@ -29,7 +29,7 @@
       game_wrap_h: <%=$game->{wrap_h} ? 1 : 0%>,
       % if (stash('my_role') eq 'player') {
          role:  'player',
-                colors: [ <%== join ',', map {"'" . $_ . "'"} @{stash('my_colors')} %> ],
+         colors: [ <%== join ',', map {"'" . $_ . "'"} @{stash('my_colors')} %> ],
       % } else {
          role:  'watcher',
       % }
@@ -64,7 +64,7 @@
             $(".ui-slider-horizontal .ui-state-default").css(
                'background-image', move_num % 2 ? 'url(/b.png)' : 'url(/w.png)');
             });
-         relevantGame.setOnTotalMovesChange(function(total_moves){
+         relevantGame.setOnTotalGameEventsChange(function(total_moves){
             //$('#time-slider').slider("option", "value", move_num);
             $("#time-machine-total-moves").text(total_moves);
             $('#time-slider').slider("option", "max", total_moves);
@@ -87,6 +87,16 @@
             relevantView.virtuallyGoToEnd();
             });
       });
+   $(document).ready(function(){
+      if(PORTAL_DATA.role == 'player'){
+         $('#pass-button').click(function(){
+            relevantGame.attemptPass();
+         });
+         $('#resign-button').click(function(){
+            relevantGame.attemptResign();
+         });
+      };
+   });
 
 </script>
 
@@ -97,15 +107,21 @@
    <div class="leftoblock">
       <h2> Cinderblock </h2>
       % if (stash 'invite_code'){
-         <span id="invite-url"> 
+         <div id="invite-url" class='left-panel-controls'> 
             % my $url = $self->req->url->base . "/invite/" . stash('invite_code');
             Invitation url: 
             <input type="text" spellcheck="false"  readonly="readonly" onclick="this.select()"
                 value="<%=$url%>">
-         </span>
+         </div>
          <br />
       % }
-      <div id="time-machine">
+      % if (stash('my_role') eq 'player') {
+         <div id="special-moves" class='left-panel-controls'>
+            <a href="#" id="pass-button"   class="special-button">Pass</a>
+            <a href="#" id='resign-button' class="special-button">Resign</a>
+         </div>
+      % }
+      <div id="time-machine" class='left-panel-controls'>
          <span id="time-machine-move-num"> 0 </span> /<span id="time-machine-total-moves"> 0 </span>
          <span class="time-tooltip"></span>
          <div id="time-slider"></div>
@@ -117,11 +133,11 @@
             <div class="tcontrol" id="fforwb"> </div>
          </div>
       </div>
-         % if ($game->{wrap_h} or $game->{wrap_v}){
-            <div id="hint">
-               Scroll the board with WASD or by dragging with the right mouse button.
-            </div>
-         % }
+      % if ($game->{wrap_h} or $game->{wrap_v}){
+         <div id="hint" class='left-panel-controls'>
+            Scroll the board with WASD or by dragging with the right mouse button.
+         </div>
+      % }
    </div>
 
    %# BOARD

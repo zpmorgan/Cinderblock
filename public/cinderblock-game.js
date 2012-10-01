@@ -1,3 +1,4 @@
+'use strict';
 
 // Goal:
 // So Game has a View, game & view each have GridBoards.
@@ -95,14 +96,14 @@ Class('CinderblockGame', {
       wrap_v : {is:'rw',init:false},
       wrap_h : {is:'rw',init:false},
       // game data:
-      move_events :{is:'ro',init:function(){return []}},
+      game_events :{is:'ro',init:function(){return []}},
       actual_board : {
          is: 'ro',  lazy:true, 
          isa: function () { return m.GridBoard },
          init:function () { return new GridBoard({w: this.w, h: this.h}) },
       },
       actual_turn : {is:'rw',init:'b'},
-      onNewMoveEvent : function(delta){},
+      onNewGameEvent : function(delta){},
       onTotalMovesChange : function(new_count){},
    },
    methods: {
@@ -119,49 +120,69 @@ Class('CinderblockGame', {
          return view;
       },
 
-      handleMoveEvent : function(move_data){
-         this.move_events.push(move_data);
-         this.getActual_board().applyDelta(move_data.delta);
-         this.actual_turn = move_data.turn_after;
-         this.onNewMoveEvent(move_data); //cb
-         this.onTotalMovesChange (this.move_events.length);
+      handleMoveEvent : function(move_event){
+         this.game_events.push(move_event);
+         this.getActual_board().applyDelta(move_event.delta);
+         this.actual_turn = move_event.turn_after;
+         this.onNewGameEvent(move_event); //cb
+         this.onTotalGameEventsChange (this.game_events.length);
+      },
+      handlePassEvent : function(pe){
+         this.game_events.push(pe);
+         //this.getActual_board().applyDelta(move_event.delta);
+         this.actual_turn = pe.turn_after;
+         this.onNewGameEvent(pe); //cb
+         this.onTotalGameEventsChange (this.game_events.length);
+      },
+      handleResignEvent : function(re){
+         alert('resign');
+         this.game_events.push(re);
+         //this.getActual_board().applyDelta(move_event.delta);
+         this.actual_turn = re.turn_after;
+         this.onNewGameEvent(re); //cb
+         this.onTotalGameEventsChange (this.game_events.length);
       },
    
       // funky callback things.
-      setOnNewMoveEvent : function(cb){
-         this.onNewMoveEvent = cb;
+      setOnNewGameEvent : function(cb){
+         this.onNewGameEvent = cb;
       },
-      setOnTotalMovesChange : function(cb){
-         this.onTotalMovesChange = cb;
+      setOnTotalGameEventsChange : function(cb){
+         this.onTotalGameEventsChange = cb;
       },
 
 
       openSocket : function(){
          var game = this;
       //   ws://127.0.0.1:3000/game/
-         conn = new WebSocket(PORTAL_DATA.ws_url);
-         this.sock = conn;
+         this.sock = new WebSocket(PORTAL_DATA.ws_url);
 
-         conn.onmessage = function  (event) {
+         this.sock.onmessage = function  (event) {
             game.log('msg: '+event.data);
-            var data = $.parseJSON(event.data);
-            //game.log(data.event_type);
-            if(data.event_type == 'move'){
-               game.handleMoveEvent(data.move);
+            var msg = $.parseJSON(event.data);
+            //
+            if(msg.type == 'move'){
+               game.handleMoveEvent(msg);
+            }
+            if(msg.type == 'pass'){
+               game.handlePassEvent(msg);
+            }
+            if(msg.type == 'resign'){
+               game.handleResignEvent(msg);
             }
          };
-         conn.onopen = function () {
+         this.sock.onopen = function () {
             game.log('Socket open');
             if(!game.time_initialized){
                game.time_initialized = Date.now();
             }
          };
-         conn.onclose = function () {
+         this.sock.onclose = function () {
             game.log('Socket close');
          };
       },
 
-      // return 0 on fail, 1 on maybe?
+      // attempts don't return responses, they just send signals upwards
       attemptMove : function(node){
          var stone_collision = this.getActual_board().getStoneAtNode(node);
          if(stone_collision)
@@ -171,6 +192,24 @@ Class('CinderblockGame', {
             move_attempt: {
                "node" : node,
                "stone": this.actual_turn,
+            }
+         };
+         this.sock.send(JSON.stringify(attempt));
+      },
+      attemptPass : function(){
+         var attempt = {
+            action: 'attempt_pass',
+            pass_attempt: {
+               "color": this.actual_turn,
+            }
+         };
+         this.sock.send(JSON.stringify(attempt));
+      },
+      attemptResign : function(node){
+         var attempt = {
+            action: 'attempt_resign',
+            resign_attempt: {
+               "color": this.actual_turn,
             }
          };
          this.sock.send(JSON.stringify(attempt));
@@ -210,7 +249,7 @@ Class ('CinderblockView', {
       can_move : function(){
          if(PORTAL_DATA.role == 'watcher')
             return 0;
-         if(this.virtualMoveNum != this.game.move_events.length)
+         if(this.virtualMoveNum != this.game.game_events.length)
             return 0;
          var turn = this.game.actual_turn;
          var can_move = 0;
@@ -236,7 +275,7 @@ Class ('CinderblockView', {
          //vertical lines
          ctx.save();
          ctx.beginPath();
-         for(i=0;i<this.game.w;i++){
+         for(var i=0;i<this.game.w;i++){
             var p = i / (this.game.w-1);
             var x = grid_box[0] + (p * this.grid_w)
             this.v_lines[i] = x;
@@ -245,7 +284,7 @@ Class ('CinderblockView', {
             ctx.lineTo(x, bottom);
          }
          // h lines
-         for(i=0;i<this.game.h;i++){
+         for(var i=0;i<this.game.h;i++){
             var p = i / (this.game.h-1);
             var y = grid_box[1] + (p * this.grid_h);
             this.h_lines[i] = y;
@@ -372,17 +411,13 @@ Class ('CinderblockView', {
                relevantView.virtuallyGoForwards();
                e.stopPropagation();
             }
-               //relevantView.virtuallyGoToEnd();
             else {return}
             view.redrawFinalWithOffset();
          });
 
-         this.game.setOnNewMoveEvent(function(move_data){
-            if(view.virtualMoveNum == view.game.move_events.length-1){ 
-               //view.applyDeltaToCanvas(move_data.delta);
-               //view.virtualMoveNum ++;
+         this.game.setOnNewGameEvent(function(move_data){
+            if(view.virtualMoveNum == view.game.game_events.length-1){ 
                view.virtuallyGoToEnd();
-               //$( "#time-slider" ).slider( "option", "value", view.game.move_events.length );
             }
          });
 
@@ -582,7 +617,9 @@ Class ('CinderblockView', {
       markLastMove: function(){
          if(this.virtualMoveNum == 0)
             return;
-         var delta = this.game.move_events[this.virtualMoveNum-1].delta;
+         var delta = this.game.game_events[this.virtualMoveNum-1].delta;
+         if(delta == null)
+            return;
          if(delta.add.length != 1){
             this.game.log('FOOOOOOOOO?');
             return;
@@ -678,14 +715,14 @@ Class ('CinderblockView', {
             y -= this.offset_y;
             y=moddd(y,this.getFinalCanvas().height);
          }
-         for (i=0;i<this.game.w;i++){
+         for (var i=0;i<this.game.w;i++){
             var node_x = this.grid_box[0] + i*this.node_w;
             if( (x > node_x-reach_x) && (x < node_x+reach_x)){
                col = i;
                break;
             }
          }
-         for (i=0;i<this.game.h;i++){
+         for (var i=0;i<this.game.h;i++){
             var node_y = this.grid_box[1] + i*this.node_h;
             if( (y > node_y-reach_y) && (y < node_y+reach_y)){
                row = i;
@@ -724,8 +761,9 @@ Class ('CinderblockView', {
          if(destMoveNum > this.virtualMoveNum){
             // go forwards in time
             while (destMoveNum != this.virtualMoveNum){
-               var event_to_apply = this.game.move_events[this.virtualMoveNum];
-               this.applyDeltaToCanvas(event_to_apply.delta);
+               var event_to_apply = this.game.game_events[this.virtualMoveNum];
+               if(event_to_apply.delta != null)
+                  this.applyDeltaToCanvas(event_to_apply.delta);
                this.virtualMoveNum++;
                //this.log (this.virtualMoveNum+1);
                //this.log (this.virtualMoveNum);
@@ -738,15 +776,17 @@ Class ('CinderblockView', {
          if(destMoveNum < this.virtualMoveNum){
             // go forwards in time
             while (destMoveNum != this.virtualMoveNum){
-               var event_to_reverse = this.game.move_events[this.virtualMoveNum-1];
+               var event_to_reverse = this.game.game_events[this.virtualMoveNum-1];
                var delta = event_to_reverse.delta;
-               var removes = delta.remove;
-               var adds = delta.add;
-               var reversed_delta = {
-                  'add' : removes,
-                  'remove' : adds,
-               };
-               this.applyDeltaToCanvas(reversed_delta);
+               if(delta != null){
+                  var removes = delta.remove;
+                  var adds = delta.add;
+                  var reversed_delta = {
+                     'add' : removes,
+                     'remove' : adds,
+                  };
+                  this.applyDeltaToCanvas(reversed_delta);
+               }
                this.virtualMoveNum--;
             }
             this.onVirtualMoveChange(this.virtualMoveNum);
@@ -759,7 +799,7 @@ Class ('CinderblockView', {
          this.virtuallyGoToMove(0);
       },
       virtuallyGoToEnd: function(){
-         this.virtuallyGoToMove(this.game.move_events.length);
+         this.virtuallyGoToMove(this.game.game_events.length);
       },
       virtuallyGoBackwards : function(){
          if(this.virtualMoveNum == 0)
@@ -767,7 +807,7 @@ Class ('CinderblockView', {
          this.virtuallyGoToMove(this.virtualMoveNum-1);
       },
       virtuallyGoForwards : function(){
-         if(this.virtualMoveNum == this.game.move_events.length)
+         if(this.virtualMoveNum == this.game.game_events.length)
             return;
          this.virtuallyGoToMove(this.virtualMoveNum+1);
       },

@@ -48,7 +48,7 @@ sub new_game{
    my $sessid = $self->sessid;
    my $board = [ map{[map {''} 1..$w]} 1..$h ];
    my $newgame = {
-      move_events => [],
+      game_events => [],
       board => $board,
       w => $w,
       h => $h,
@@ -174,10 +174,10 @@ sub game_event_socket{
    $self->getset_redis->get("game:$game_id" => sub{
          my ($redis,$res) = @_;
          my $game = $json->decode($res);
-         my $all_move_events = $game->{move_events};
-         for my $mv(@$all_move_events){
-            my $event = {event_type => 'move', move=>$mv};
-            $ws->send($json->encode($event));
+         my $all_game_events = $game->{game_events};
+         for my $e(@$all_game_events){
+            #my $event = {event_type => 'move', move=>$mv};
+            $ws->send($json->encode($e));
          }
       });
    
@@ -188,6 +188,12 @@ sub game_event_socket{
          my $action = $msg_data->{action};
          if($action eq 'attempt_move'){
             $self->attempt_move($msg_data);
+         }
+         elsif($action eq 'attempt_pass'){
+            $self->attempt_pass($msg_data);
+         }
+         elsif($action eq 'attempt_resign'){
+            $self->attempt_resign($msg_data);
          }
       });
    $self->on(finish => sub {
@@ -204,8 +210,7 @@ sub game_event_socket{
 sub attempt_move{
    my ($self, $msg_data) = @_;
    my $game_id = $self->stash('game_id');
-   my $redis1 = Mojo::Redis->new();
-   $redis1->get ("game:$game_id" => sub{
+   $self->getset_redis->get ("game:$game_id" => sub{
          my ($redis,$game) = @_;
          $game = $json->decode($game);
          my $turn = $game->{turn};
@@ -231,31 +236,76 @@ sub attempt_move{
          $game->{board} = $newboard;
          $game->{turn} = ($stone eq 'w') ? 'b' : 'w';
 
-         #my $move_events = $game->{move_events};
-         my $new_event = {
-            node => [$row,$col],
-            stone => $stone,
-            delta => $delta,
+         my $game_event = {
+            type => 'move',
+            color => $stone,
             time => time,
             turn_after => $game->{turn},
+            node => [$row,$col],
+            delta => $delta,
          };
-         push @{$game->{move_events}}, $new_event;
-         if (@{$game->{move_events}} > 3){ # active enough.
-            $self->getset_redis->zadd(recently_actives_game_ids => time, $game_id);
+         push @{$game->{game_events}}, $game_event;
+         if (@{$game->{game_events}} > 3){ # active enough.
+            $self->promote_game_activity($game_id);
          }
 
-         $redis->set("game:$game_id", $json->encode($game) => sub{$redis1});
-         $self->publish_move_event($new_event);
+         $redis->set("game:$game_id", $json->encode($game));
+         $self->publish_game_event($game_event);
       });
 }
+sub promote_game_activity{
+   my ($self, $game_id) = @_;
+   $self->getset_redis->zadd(recently_actives_game_ids => time, $game_id);
+}
 
-sub publish_move_event{
-   my ($self,$mov) = @_;
-   my $event = {
-      event_type => 'move',
-      move => $mov,
-   };
-   $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
+sub publish_game_event{
+   my ($self,$e) = @_;
+   $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($e));
+}
+sub attempt_pass{
+   my ($self,$msg) = @_;
+   my $game_id = $self->stash('game_id');
+   $self->getset_redis->get ("game:$game_id" => sub{
+      my ($redis,$game) = @_;
+      $game = $json->decode($game);
+      my $status = $game->{status} // 'active';
+      return unless $status eq 'active';
+
+      my $turn = $game->{turn};
+      my $color = $msg->{pass_attempt}{color};
+      return unless $color eq $turn;
+      my $roles = $self->players_in_game($game_id);
+      return unless ($roles->{$color} == $self->sessid);
+      $game->{turn} = ($color eq 'w') ? 'b' : 'w';
+      my $event = {
+         type => 'pass', 
+         color => $color,
+         turn_after => $game->{turn},
+         time => time,
+         # node => [$row,$col],
+         # delta => $delta,
+      };
+      push @{$game->{game_events}}, $event;
+      $redis->set("game:$game_id", $json->encode($game));
+#     PUB
+      $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
+   });
+}
+sub attempt_resign{
+   my ($self,$msg) = @_;
+   my $game_id = $self->stash('game_id');
+   $self->getset_redis->get ("game:$game_id" => sub{
+      my ($redis,$game) = @_;
+      $game = $json->decode($game);
+      my $status = $game->{status} // 'active';
+      return unless $status eq 'active';
+      my $color = $msg->{resign_attempt}{color};
+      my $roles = $self->players_in_game($game_id);
+      return unless ($roles->{$color} == $self->sessid);
+      # allow resign out of turn.
+      # my $turn = $game->{turn};
+      # return unless $color eq $turn; 
+   });
 }
 
 # Websocket.
