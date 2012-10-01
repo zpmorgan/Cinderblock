@@ -281,7 +281,7 @@ sub attempt_pass{
       my $color = $msg->{pass_attempt}{color};
       return unless $color eq $turn;
       my $roles = $self->players_in_game($game_id);
-      my $relevent_sessid = $roles->{color};
+      my $relevent_sessid = $roles->{$color};
       return unless (defined $relevent_sessid);
       return unless ($relevent_sessid == $self->sessid);
       $game->{turn} = ($color eq 'w') ? 'b' : 'w';
