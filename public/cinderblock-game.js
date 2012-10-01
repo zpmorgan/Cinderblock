@@ -468,7 +468,8 @@ Class ('CinderblockView', {
          var ctx = this.getIntermediateCanvas().getContext('2d');
          ctx.fillStyle = 'red';
          //var bg = $("#wood-bg")[0];
-         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142-vertical.JPG"};
+         this.image_urls = {w:"/w.png",b:"/b.png",bg:"/jigo-woodgrain.jpg"};
+         //this.image_urls = {w:"/w.png",b:"/b.png",bg:"/light_coloured_wood_200142-vertical.JPG"};
          //http://www.flickr.com/photos/wwarby/6963362742/in/set-72157625097924639/
          //this.image_urls = {w:"/w.png",b:"/b.png",bg:"/birch_tex.jpg"};
          this.images = new Object();
