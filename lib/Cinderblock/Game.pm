@@ -212,22 +212,28 @@ sub attempt_move{
    my $game_id = $self->stash('game_id');
    $self->getset_redis->get ("game:$game_id" => sub{
          my ($redis,$game) = @_;
-         $game = $json->decode($game);
-         my $turn = $game->{turn};
-         my $board = $game->{board};
-         my ($w,$h) = @$game{qw/w h/};
          my $move_attempt = $msg_data->{move_attempt};
          my $stone = $move_attempt->{stone};
+         my $roles = $self->players_in_game($game_id);
+         my $relevent_sessid = $roles->{$stone};
+         # this session has this color?
+         return unless (defined $relevent_sessid);
+         return unless ($relevent_sessid == $self->sessid);
+         # this color can move?
+         $game = $json->decode($game);
+         my $turn = $game->{turn};
          unless ($stone eq $turn) {return}
+
          my $row = $move_attempt->{node}[0];
          my $col = $move_attempt->{node}[1];
-   
+         my ($w,$h) = @$game{qw/w h/};
          my $node = [$row,$col];
          my $rulemap = basilisk::Rulemap::Rect->new(
             h => $h, w => $w,
             wrap_v => $game->{wrap_v},
             wrap_h => $game->{wrap_h},
          );
+         my $board = $game->{board};
          my ($newboard,$fail,$caps) =
             $rulemap->evaluate_move($board, $node, $stone);
             #my $collision = $board->[$row][$col];
@@ -275,7 +281,9 @@ sub attempt_pass{
       my $color = $msg->{pass_attempt}{color};
       return unless $color eq $turn;
       my $roles = $self->players_in_game($game_id);
-      return unless ($roles->{$color} == $self->sessid);
+      my $relevent_sessid = $roles->{color};
+      return unless (defined $relevent_sessid);
+      return unless ($relevent_sessid == $self->sessid);
       $game->{turn} = ($color eq 'w') ? 'b' : 'w';
       my $event = {
          type => 'pass', 
