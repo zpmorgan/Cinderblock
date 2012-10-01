@@ -55,8 +55,10 @@
       sizes from 2 to 30 nodes in either dimension.
       <br />
       <a href="http://cinderblock.zpmorgan.com/new_game">New game</a>
-      <br />
-      <a href="http://cinderblock.zpmorgan.com/game/29">Example game</a>
+      % if (stash 'last_active_game') {
+         <br />
+         <a href="<%=$self->req->url->base%>/game/<%=stash ('last_active_game')%>">Example game</a>
+      % }
    </div>
    <h3 style="color:#ccc;"> Sad little chat box: </h3>
    <input type="text" spellcheck="false" id="new-msg-input" maxlength="500"style="width:20em" >

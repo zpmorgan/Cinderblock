@@ -47,7 +47,7 @@ sub startup {
             srand(time ^ ($$ << 7));
             $seeded = 1;
          }
-         return $block_redis if $block_redis;
+         return $block_redis if ($block_redis && $block_redis->connected);
          $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
          $block_redis->timeout(1<<29);
          $app->mention_on_err_and_close($block_redis, 'block_redis');

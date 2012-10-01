@@ -23,6 +23,8 @@ sub new_game_form{
 }
 sub welcome{
    my $self = shift;
+   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', 0,0);
+   $self->stash(last_active_game => $actives->[0]);
    $self->render(template => 'game/welcome');
 }
 sub activity{ # show recently active games.
