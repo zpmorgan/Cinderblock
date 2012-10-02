@@ -208,6 +208,8 @@ sub game_event_socket{
       });
 }
 
+use Digest::MD5 qw(md5_base64);
+
 # request made through websocket.
 sub attempt_move{
    my ($self, $msg_data) = @_;
@@ -240,11 +242,20 @@ sub attempt_move{
             $rulemap->evaluate_move($board, $node, $stone);
             #my $collision = $board->[$row][$col];
          if($fail){return}
+         # now normalize & hash the board, check for collisions, & later store hash in event..
+         my $normalized_state = $stone .':'. $rulemap->normalize_board_to_string($newboard);
+         my $move_hash = md5_base64($normalized_state);
+         my $ko_collision =   
+            grep {$_->{move_hash} && ($_->{move_hash} eq $move_hash)} 
+               @{$game->{game_events}};
+         if($ko_collision){return}
+
          my $delta = $rulemap->delta($board, $newboard);
          $game->{board} = $newboard;
          $game->{turn} = ($stone eq 'w') ? 'b' : 'w';
 
          my $game_event = {
+            move_hash => $move_hash,
             type => 'move',
             color => $stone,
             time => time,
