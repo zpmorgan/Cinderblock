@@ -33,7 +33,7 @@ sub startup {
 
    my $config = $self->plugin('JSONConfig');
 
-   $self->secret('$spp->sessions->default_expiration(360000); #100 hours');
+   $self->secret('$skpp->sessions->default_expiration(360000); #100 hours');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
@@ -93,7 +93,12 @@ sub startup {
    # Router
    my $r = $self->routes;
 
-   # Normal route to controller
+   # auth stuff:
+   $r->get('/login/')->to('auth#login');
+   $r->get('/openid_login/:oid_provider')->to('auth#openid_login');
+   $r->get('/openid_return/')->to('auth#openid_return');
+
+   # routes to game controller
    $r->get('/')->to('game#welcome');
    $r->websocket('/sadchat/')->to('game#sadchat');
    $r->get('/activity/')->to('game#activity');

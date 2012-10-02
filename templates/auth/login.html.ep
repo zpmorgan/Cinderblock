@@ -1,0 +1,33 @@
+% layout 'foo_layout',
+
+<script type="text/javascript">
+   $(document).ready(function(){
+   });
+</script>
+
+<link rel="stylesheet" href="auth-buttons.css">
+
+<div class="wrapperblock ">
+   <h2> Login </h2>
+   <div style="height: 40px; display:block;margin:0 auto"> </div>
+   <div class="welcome rounded-corners colors-light-on-dark">
+      <div>
+         <p><a class="btn-auth btn-google"  href="/openid_login/google"
+            >Sign in with <b>Google</b></a></p>
+         <p><a class="btn-auth btn-facebook" href="/openid_login/stackexchange"
+            >Sign in with <b>Stack Exchange</b></a></p>
+         <p><a class="btn-auth btn-twitter"  href="/openid_login/twitter"
+            >Sign in with <b>Twitter</b></a></p>
+         <p><a class="btn-auth btn-github" href="/openid_login/github"
+            >Sign in with <b>GitHub</b></a></p>
+         <p><a class="btn-auth btn-yahoo"  href="/openid_login/yahoo"
+            >Sign in with <b>Yahoo!</b></a></p>
+%#         <p><a class="btn-auth btn-windows" href="/openid_login/windows"
+%#            >Sign in with <b>Windows Live ID</b></a></p>
+%#         <p><a class="btn-auth btn-openid" href="/openid_login/openid"
+%#            >Sign in with <b>OpenID</b></a></p>
+      </div>
+      %#<a href="/openid_login/google">Login with Google</a>
+      %#<a href="/openid_login/facebook">Login with Facebook</a>
+   </div>
+</div>
