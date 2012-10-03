@@ -7,7 +7,7 @@ my $json = Mojo::JSON->new();
 use basilisk::Rulemap;
 use basilisk::Rulemap::Rect;
 
-sub sessid{
+sub FOO_sessid{
    my $self = shift;
    my $sessid = $self->session('session_id');
    unless ($sessid){

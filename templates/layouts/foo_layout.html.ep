@@ -13,12 +13,18 @@
          <div class="tinyheadercenter">
             <a href="/new_game">New game</a>
             <a href="/activity">Activity</a>
+            % if (ident()) {
+               <a href="/logout">Log out, <%= ident()->{username} %></a>
+            % } else {
+               <a href="/profile">Profile</a>
+               <a href="/login">Log in</a>
+            % }
          </div>
       </div>
-      % if(stash 'msg'){
+      % if(stash ('msg') // session('msg')){
          <div class="msg-wrap">
          <div class="msg">
-            %= stash 'msg'
+            %= stash ('msg') // session('msg')
          </div>
          </div>
       % }

@@ -1,5 +1,7 @@
 package Cinderblock;
 use Mojo::Base 'Mojolicious';
+use Mojo::JSON;
+my $json = Mojo::JSON->new();
 
 use Mojo::Redis;
 #use Protocol::Redis::XS;
@@ -33,13 +35,36 @@ sub startup {
 
    my $config = $self->plugin('JSONConfig');
 
-   $self->secret('$skpp->sessions->default_expiration(360000); #100 hours');
+   $self->secret('$skppxa>sessions->default_expiration(360000); #100 hours');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
 
-   my $seeded = 0;
+   #get or generate a unique id for this session
+   $self->helper(sessid => sub{
+      my $self = shift;
+      my $sessid = $self->session('session_id');
+      unless ($sessid){
+         $sessid = $self->redis_block(incr => 'next_session_id');
+         $self->session(session_id => $sessid);
+         $self->redis_block(SET => "session:$sessid" => '{}');
+      }
+      return $sessid;
+   });
+   $self->helper(ident => sub{ # has ident ~~ logged in.
+      my $self = shift;
+      my $ident = $self->stash('ident');
+      unless ($ident){
+         my $ident_id = $self->session('ident_id');
+         return unless $ident_id;
+         $ident = $self->redis_block(HGET => 'ident', $ident_id);
+         $ident = $json->decode($ident);
+         $self->stash(ident => $ident);
+      }
+      return $ident;
+   });
 
+   my $seeded = 0;
    my $redis; 
    $self->helper (block_redis => sub{
          my $self = shift;
@@ -95,8 +120,10 @@ sub startup {
 
    # auth stuff:
    $r->get('/login/')->to('auth#login');
+   $r->get('/logout/')->to('auth#logout');
    $r->get('/openid_login/:oid_provider')->to('auth#openid_login');
    $r->get('/openid_return/')->to('auth#openid_return');
+   $r->any('/profile/')->to('auth#profile');
 
    # routes to game controller
    $r->get('/')->to('game#welcome');

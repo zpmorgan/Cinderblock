@@ -1,0 +1,34 @@
+% layout 'foo_layout',
+%# <script src="jquery.infieldlabel.min.js" type="text/javascript"></script>
+
+<style> 
+%#   form p { position:relative }
+%#   label  { position:absolute; top:0; left:0}
+</style>
+
+<script type="text/javascript">
+   $(document).ready(function(){
+         //         $("label").inFieldLabels();
+         // this doesn't seem to work well.
+         });
+</script>
+
+<div class="wrapperblock ">
+   <div style="height: 40px; display:block;margin:0 auto"> </div>
+   <div class="welcome rounded-corners colors-light-on-dark">
+      <h2> Profile </h2>
+      %= form_for '/profile', method=>'POST', begin
+      % # my @fields = qw/rank_self_estimate username/;
+      % my $ident = stash 'ident';
+      <p>
+         <label for="username" class='inlined'>Username </label>
+         %= text_field 'username', class=>'input-text', value => $ident->{username}
+         </p><p>
+         <label > rank estimate </label>
+         %# <label class='inlined', for="rank_self_estimate"> 13 kyu </label>
+         %= text_field 'rank_self_estimate', class=>'input-text',value => $ident->{rank_self_estimate}//'20 kyu'
+         </p>
+         %= submit_button 
+      % end
+   </div>
+</div>
