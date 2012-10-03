@@ -58,7 +58,7 @@ sub new_game{
       wrap_h => $wrap_h,
       turn => 'b',
    };
-   $self->getset_redis->set("game:$game_id" => $json->encode($newgame));
+   $self->getset_redis->hset(game => $game_id => $json->encode($newgame));
    # assign player role to $self->session
    my $color = (rand>.5) ? 'b' : 'w';
    $self->set_game_player(game_id => $game_id, color => $color, sessid => $sessid);
@@ -116,7 +116,7 @@ sub do_game{
    die $roles unless ref($roles) eq 'HASH';
    my %roles = %$roles;
    my $sessid = $self->sessid;
-   my $game_json = $self->redis_block(GET => "game:$game_id");
+   my $game_json = $self->redis_block(HGET => game => $game_id);
    my $game = $json->decode($game_json);
    $self->stash(game => $game);
 
@@ -173,7 +173,7 @@ sub game_event_socket{
          return if $event->[0] eq 'subscribe';
          $ws->send($event->[2]);
       });
-   $self->getset_redis->get("game:$game_id" => sub{
+   $self->getset_redis->hget(game => $game_id => sub{
          my ($redis,$res) = @_;
          my $game = $json->decode($res);
          my $all_game_events = $game->{game_events};
@@ -214,7 +214,7 @@ use Digest::MD5 qw(md5_base64);
 sub attempt_move{
    my ($self, $msg_data) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->get ("game:$game_id" => sub{
+   $self->getset_redis->hget (game => $game_id => sub{
          my ($redis,$game) = @_;
          my $move_attempt = $msg_data->{move_attempt};
          my $stone = $move_attempt->{stone};
@@ -268,7 +268,7 @@ sub attempt_move{
             $self->promote_game_activity($game_id);
          }
 
-         $redis->set("game:$game_id", $json->encode($game));
+         $redis->hset(game => $game_id, $json->encode($game));
          $self->publish_game_event($game_event);
       });
 }
@@ -284,7 +284,7 @@ sub publish_game_event{
 sub attempt_pass{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->get ("game:$game_id" => sub{
+   $self->getset_redis->hget (game => $game_id => sub{
       my ($redis,$game) = @_;
       $game = $json->decode($game);
       my $status = $game->{status} // 'active';
@@ -307,7 +307,7 @@ sub attempt_pass{
          # delta => $delta,
       };
       push @{$game->{game_events}}, $event;
-      $redis->set("game:$game_id", $json->encode($game));
+      $redis->hset(game => $game_id => $json->encode($game));
 #     PUB
       $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
    });
@@ -315,7 +315,7 @@ sub attempt_pass{
 sub attempt_resign{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->get ("game:$game_id" => sub{
+   $self->getset_redis->hget (game => $game_id => sub{
       my ($redis,$game) = @_;
       $game = $json->decode($game);
       my $status = $game->{status} // 'active';
@@ -334,7 +334,7 @@ sub attempt_resign{
          winner => $game->{winner},
       };
       push @{$game->{game_events}}, $event;
-      $redis->set("game:$game_id", $json->encode($game));
+      $redis->hset(game => $game_id, $json->encode($game));
       $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
    });
 }
