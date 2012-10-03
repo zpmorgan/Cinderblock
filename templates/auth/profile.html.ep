@@ -25,7 +25,6 @@
          %= text_field 'username', class=>'input-text', value => $ident->{username}
          </p><p>
          <label > rank estimate </label>
-         %# <label class='inlined', for="rank_self_estimate"> 13 kyu </label>
          %= text_field 'rank_self_estimate', class=>'input-text',value => $ident->{rank_self_estimate}//'20 kyu'
          </p>
          %= submit_button 
