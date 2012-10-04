@@ -13,7 +13,7 @@
          <div class="tinyheadercenter">
             <a href="/new_game">New game</a>
             <a href="/activity">Activity</a>
-            % if (ident()) {
+            % if (logged_in()) {
                <a href="/profile">Profile</a>
                <a href="/logout">Log out, <%= ident()->{username} %></a>
             % } else {

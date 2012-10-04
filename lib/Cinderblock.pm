@@ -53,18 +53,31 @@ sub startup {
       }
       return $sessid;
    });
-   $self->helper(ident => sub{ # has ident ~~ logged in.
+   $self->helper(ident => sub{ # ident : find or create-pseudo
       my $self = shift;
       my $ident = $self->stash('ident');
-      unless ($ident){
-         my $ident_id = $self->session('ident_id');
-         return unless $ident_id;
+      return $ident if $ident;
+      my $ident_id = $self->session('ident_id');
+      if($ident_id){
          $ident = $self->redis_block(HGET => 'ident', $ident_id);
          $ident = $json->decode($ident);
          $self->stash(ident => $ident);
+         return $ident;
       }
+      my $sessid = $self->sessid;
+      # generate pseudo :/
+      $ident = $self->model->new_anon_ident(sessid => $sessid);
+      $self->session(ident_id => $ident->{id});
+      $self->stash(ident => $ident);
       return $ident;
    });
+   $self->helper(logged_in => sub{ # has ident . not a pseudo
+         my $self = shift;
+         return 0 unless $self->session('ident_id');
+         # still could be an anon ident.
+         my $ident = $self->ident;
+         return ($ident->{anon} ? 0 : 1);
+      });
 
    my $seeded = 0;
    my $redis; 

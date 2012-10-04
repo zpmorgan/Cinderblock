@@ -195,7 +195,7 @@ sub logout{
 sub profile{ 
    my $self = shift;
    my $ident = $self->ident;
-   unless($ident){
+   unless($self->logged_in){
       return $self->render(template => 'auth/login', msg => 'not logged in..');
    }
    my @fields = qw/rank_self_estimate username/;

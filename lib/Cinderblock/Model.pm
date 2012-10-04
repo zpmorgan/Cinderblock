@@ -12,7 +12,7 @@ has block_redis => (
    builder => '_new_blocking_redis',
    is => 'rw',
 );
-
+use Carp qw/confess/;
 sub _new_blocking_redis{
    my $self = shift;
    my $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
@@ -27,6 +27,7 @@ sub _new_blocking_redis{
          my($redis, $error) = @_;
          say "[blocking REDIS ERROR!] $error";
          say "stopping extra ioloop?";
+         # confess;
          $redis->ioloop->stop;
          $self->block_redis($self->_new_blocking_redis);
       });
@@ -65,13 +66,15 @@ sub game_role_ident{ # ($game_id, 'w'
 sub set_game_player{
    my $self = shift;
    my %opts = @_;
-   warn join ',',%opts;
    my $ident_id = $opts{ident_id};
-   unless(defined $opts{ident_id}){
+   unless($ident_id){
       die 'no session to speak of.' unless $opts{sessid};
       $ident_id = $self->redis_block(HGET => session_ident => $opts{sessid});
+      unless(defined $ident_id){
+         my $ident = $self->new_anon_ident(sessid => $opts{sessid});
+         $ident_id = $ident->{id};
+      }
    }
-   warn $ident_id;
    #my $sessid = $opts{sessid} // $self->sessid;
    my $gameid = $opts{game_id};# // $self->stash('game_id');
    die unless $opts{color} =~ /^(b|w)$/;
@@ -80,9 +83,20 @@ sub set_game_player{
    $roles = $json->decode($roles);
    $roles->{$opts{color}} = $ident_id;
    $roles = $json->encode($roles);
-   #warn join '|',(HSET => game_roles => $gameid, $roles);
    $self->redis_block(HSET => game_roles => $gameid, $roles);
 }
 
+sub new_anon_ident{
+   my $self = shift;
+   my %opts = @_;
+   my $sessid = $opts{sessid};
+   die unless $sessid;
+   my $ident_id = $self->redis_block(INCR => 'next_ident_id');
+   my $username = 'anon-' . $ident_id;
+   my $ident = {id => $ident_id, anon => 1, username => $username};
+   $self->redis_block(HSET => ident => $ident_id, $json->encode($ident));
+   $self->redis_block(HSET => session_ident => $sessid, $ident_id);
+   return $ident;
+}
 
 1;
