@@ -16,6 +16,10 @@
 <div class="wrapperblock ">
    <div style="height: 40px; display:block;margin:0 auto"> </div>
    <div class="welcome rounded-corners colors-light-on-dark">
+      %= 'sessid: '. $self->sessid
+      <br />
+      %= 'ident id: '. $self->ident->{id}
+
       <h2> Profile </h2>
       %= form_for '/profile', method=>'POST', begin
       % # my @fields = qw/rank_self_estimate username/;

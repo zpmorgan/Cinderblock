@@ -49,23 +49,39 @@ sub redis_block{
    return @results;
 };
 
+# get role...
 sub game_role_ident{ # ($game_id, 'w'
    my ($self,$game_id, $role) = @_;
-   #my $game_json = $self->redis_block(HGET => game => $game_id);
-   #my $game = $json->decode($game_json);
    my $game_roles_json = $self->redis_block(HGET => game_roles => $game_id);
-   #say $game_id;
-   #say $game_roles_json ;
    my $game_roles = $json->decode($game_roles_json);
    my $sessid = $game_roles->{$role};
-   #say $sessid ;
    return unless $sessid;
    my $ident_id = $self->redis_block(HGET => session_ident => $sessid);
-   #say $ident_id;
    return unless $ident_id;
    my $ident = $self->redis_block(HGET => ident => $ident_id);
-   #say $ident;
    return $json->decode($ident);
+}
+# set $role as an ident_id
+sub set_game_player{
+   my $self = shift;
+   my %opts = @_;
+   warn join ',',%opts;
+   my $ident_id = $opts{ident_id};
+   unless(defined $opts{ident_id}){
+      die 'no session to speak of.' unless $opts{sessid};
+      $ident_id = $self->redis_block(HGET => session_ident => $opts{sessid});
+   }
+   warn $ident_id;
+   #my $sessid = $opts{sessid} // $self->sessid;
+   my $gameid = $opts{game_id};# // $self->stash('game_id');
+   die unless $opts{color} =~ /^(b|w)$/;
+
+   my $roles = $self->redis_block(HGET => game_roles => $gameid);
+   $roles = $json->decode($roles);
+   $roles->{$opts{color}} = $ident_id;
+   $roles = $json->encode($roles);
+   #warn join '|',(HSET => game_roles => $gameid, $roles);
+   $self->redis_block(HSET => game_roles => $gameid, $roles);
 }
 
 

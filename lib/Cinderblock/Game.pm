@@ -59,10 +59,10 @@ sub new_game{
    $self->getset_redis->hset(game => $game_id => $json->encode($newgame));
    # assign player role to $self->session
    my $color = (rand>.5) ? 'b' : 'w';
-   $self->set_game_player(game_id => $game_id, color => $color, sessid => $self->sessid);
+   $self->model->set_game_player(game_id => $game_id, color => $color, sessid => $self->sessid);
    if($self->param('play_against') eq 'self'){
       my $other_color = ($color eq 'b' ? 'w' : 'b');
-      $self->set_game_player(game_id => $game_id, color => $other_color, sessid => $self->sessid);
+      $self->model->set_game_player(game_id => $game_id, color => $other_color, sessid => $self->sessid);
    }
    
    $self->redirect_to("/game/$game_id");
@@ -70,7 +70,7 @@ sub new_game{
 }
 
 # get or set $role
-sub set_game_player{
+sub FOO_set_game_player{
    my $self = shift;
    my %opts = @_;
    warn join ',',%opts;
@@ -111,7 +111,7 @@ sub be_invited{
    my $game_id = $invite->{game_id};
    say $invite->{color} . ", $game_id, ".$self->sessid;# = $invite->{game_id};
    # $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
-   $self->set_game_player(
+   $self->model->set_game_player(
       game_id => $game_id,
       color => $invite->{color},
       sessid => $self->sessid,);
@@ -124,7 +124,7 @@ sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
    my $roles = $self->players_in_game($game_id);
-   die $roles unless ref($roles) eq 'HASH';
+#   die $roles unless ref($roles) eq 'HASH';
    my %roles = %$roles;
    my $sessid = $self->sessid;
    my $game_json = $self->redis_block(HGET => game => $game_id);
@@ -136,7 +136,7 @@ sub do_game{
    my @my_colors;
    my $my_role = 'watcher';
    for my $role_color(keys %roles){
-      if($roles{$role_color} == $sessid){
+      if($roles{$role_color} == $self->ident->{id}){
          $my_role = 'player';
          push @my_colors, $role_color;
       }
@@ -234,10 +234,10 @@ sub attempt_move{
          my $move_attempt = $msg_data->{move_attempt};
          my $stone = $move_attempt->{stone};
          my $roles = $self->players_in_game($game_id);
-         my $relevent_sessid = $roles->{$stone};
+         my $relevent_ident_id = $roles->{$stone};
          # this session has this color?
-         return unless (defined $relevent_sessid);
-         return unless ($relevent_sessid == $self->sessid);
+         return unless (defined $relevent_ident_id);
+         return unless ($relevent_ident_id == $self->ident->{id});
          # this color can move?
          $game = $json->decode($game);
          my $turn = $game->{turn};
@@ -309,9 +309,9 @@ sub attempt_pass{
       my $color = $msg->{pass_attempt}{color};
       return unless $color eq $turn;
       my $roles = $self->players_in_game($game_id);
-      my $relevent_sessid = $roles->{$color};
-      return unless (defined $relevent_sessid);
-      return unless ($relevent_sessid == $self->sessid);
+      my $relevent_ident_id = $roles->{$color};
+      return unless (defined $relevent_ident_id);
+      return unless ($relevent_ident_id == $self->ident->{id});
       $game->{turn} = ($color eq 'w') ? 'b' : 'w';
       my $event = {
          type => 'pass', 
@@ -337,7 +337,7 @@ sub attempt_resign{
       return unless $status eq 'active';
       my $color = $msg->{resign_attempt}{color};
       my $roles = $self->players_in_game($game_id);
-      return unless ($roles->{$color} == $self->sessid);
+      return unless ($roles->{$color} == $self->ident->{id});
       $game->{turn} = '';
       $game->{status} = 'finished';
       $game->{winner} = ($color eq 'b') ? 'w' : 'b';
