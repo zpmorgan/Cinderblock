@@ -112,6 +112,22 @@
    <div class="fooblock"> </div>
    <div class="leftoblock">
       <h2 id="logoblock"> Cinderblock </h2>
+      <div class="players-panel" class='left-panel-controls'>
+         <div class="players-panel-player rel-left">
+            <img class='players-panel-giant-stone' src="/b.png">
+            %= stash('b_ident')->{username}
+         </div>
+         <div class="players-panel-player rel-right">
+            <img class='players-panel-giant-stone' src="/w.png">
+            %= stash('w_ident')->{username}
+         </div>
+         <table style="width:100%">
+            <tr>
+               %#<td class="players-panel-player"><img style="width:100%" src="/b.png"></td>
+               %#<td width="50%"><img style="width:100%" src="/w.png"></td>
+            </tr>
+         </table>
+      </div>
       % if (stash 'invite_code'){
          <div id="invite-url" class='left-panel-controls'> 
             % my $url = $self->req->url->base . "/invite/" . stash('invite_code');

@@ -1,5 +1,6 @@
 package Cinderblock;
 use Mojo::Base 'Mojolicious';
+use Cinderblock::Model;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
@@ -11,6 +12,7 @@ our $getset_redis;# = Mojo::Redis->new();
 #$getset_redis->timeout(1<<29);
 our $block_redis;# = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
 #$block_redis->timeout(1<<29);
+our $model;
 
 sub mention_on_err_and_close{ 
    my ($self,$redis, $nam) = @_;;
@@ -114,6 +116,11 @@ sub startup {
          }
          return $ws_url_base;
       });
+   $self->helper (model => sub{
+      return $model if $model;
+      $model = Cinderblock::Model->new();
+      return $model;
+   });
 
    # Router
    my $r = $self->routes;

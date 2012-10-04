@@ -7,14 +7,12 @@ my $json = Mojo::JSON->new();
 use basilisk::Rulemap;
 use basilisk::Rulemap::Rect;
 
-sub FOO_sessid{
-   my $self = shift;
-   my $sessid = $self->session('session_id');
-   unless ($sessid){
-      $sessid = $self->redis_block(incr => 'next_session_id');
-      $self->session(session_id => $sessid);
-   }
-   return $sessid;
+# use Cinderblock::Model;
+
+use Time::HiRes;
+
+sub cur_time_ms{
+   return int(Time::HiRes::time() * 1000)
 }
 
 sub new_game_form{
@@ -47,7 +45,7 @@ sub new_game{
    my $wrap_h = $self->param('wrap_h') ? 1 : 0;
 
    my $game_id = $self->redis_block(incr => 'next_game_id');
-   my $sessid = $self->sessid;
+   #my $sessid = $self->sessid;
    my $board = [ map{[map {''} 1..$w]} 1..$h ];
    my $newgame = {
       game_events => [],
@@ -61,10 +59,10 @@ sub new_game{
    $self->getset_redis->hset(game => $game_id => $json->encode($newgame));
    # assign player role to $self->session
    my $color = (rand>.5) ? 'b' : 'w';
-   $self->set_game_player(game_id => $game_id, color => $color, sessid => $sessid);
+   $self->set_game_player(game_id => $game_id, color => $color, sessid => $self->sessid);
    if($self->param('play_against') eq 'self'){
       my $other_color = ($color eq 'b' ? 'w' : 'b');
-      $self->set_game_player(game_id => $game_id, color => $other_color, sessid => $sessid);
+      $self->set_game_player(game_id => $game_id, color => $other_color, sessid => $self->sessid);
    }
    
    $self->redirect_to("/game/$game_id");
@@ -75,16 +73,24 @@ sub new_game{
 sub set_game_player{
    my $self = shift;
    my %opts = @_;
+   warn join ',',%opts;
    my $sessid = $opts{sessid} // $self->sessid;
    my $gameid = $opts{game_id} // $self->stash('game_id');
    die unless $opts{color} =~ /^(b|w)$/;
-   $self->redis_block(HSET => "gameroles:$gameid", $opts{color} => $sessid);
+
+   my $roles = $self->redis_block(HGET => game_roles => $gameid);
+   $roles = $json->decode($roles);
+   $roles->{$opts{color}} = $sessid;
+   $roles = $json->encode($roles);
+   warn join '|',(HSET => game_roles => $gameid, $roles);
+   $self->redis_block(HSET => game_roles => $gameid, $roles);
+   #$self->redis_block(HSET => "gameroles:$gameid", $opts{color} => $sessid);
 }
 sub players_in_game{
    my $self = shift;
    my $game_id = shift;
-   my $roles = $self->redis_block('HGETALL',"gameroles:$game_id");
-   return $roles // {};
+   my $roles = $self->redis_block('HGET',game_roles => $game_id) // '{}';
+   return $json->decode($roles);
 }
 
 sub be_invited{
@@ -103,7 +109,12 @@ sub be_invited{
    }
    $invite = $json->decode($invite);
    my $game_id = $invite->{game_id};
-   $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
+   say $invite->{color} . ", $game_id, ".$self->sessid;# = $invite->{game_id};
+   # $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
+   $self->set_game_player(
+      game_id => $game_id,
+      color => $invite->{color},
+      sessid => $self->sessid,);
 
    $self->redirect_to("/game/$game_id");
    $self->render(text => '');
@@ -130,6 +141,10 @@ sub do_game{
          push @my_colors, $role_color;
       }
    }
+   my $b_ident = $self->model->game_role_ident($game_id, 'b') // {};
+   my $w_ident = $self->model->game_role_ident($game_id, 'w') // {};
+   $self->stash(b_ident => $b_ident);
+   $self->stash(w_ident => $w_ident);
    $self->stash(my_role => $my_role);
    $self->stash(my_colors => \@my_colors);
    if( keys %roles == 1 ){ #currently only one player ?
@@ -258,7 +273,7 @@ sub attempt_move{
             move_hash => $move_hash,
             type => 'move',
             color => $stone,
-            time => time,
+            time_ms => cur_time_ms(),
             turn_after => $game->{turn},
             node => [$row,$col],
             delta => $delta,
@@ -274,7 +289,7 @@ sub attempt_move{
 }
 sub promote_game_activity{
    my ($self, $game_id) = @_;
-   $self->getset_redis->zadd(recently_actives_game_ids => time, $game_id);
+   $self->getset_redis->zadd(recently_actives_game_ids => cur_time_ms(), $game_id);
 }
 
 sub publish_game_event{
@@ -302,7 +317,7 @@ sub attempt_pass{
          type => 'pass', 
          color => $color,
          turn_after => $game->{turn},
-         time => time,
+         time_ms => cur_time_ms(),
          # node => [$row,$col],
          # delta => $delta,
       };
@@ -330,7 +345,7 @@ sub attempt_resign{
          type => 'resign', 
          color => $color,
          turn_after => '', 
-         time => time,
+         time_ms => cur_time_ms(),
          winner => $game->{winner},
       };
       push @{$game->{game_events}}, $event;
@@ -358,8 +373,7 @@ sub sadchat{
    $self->getset_redis->lrange('sadchat_messages', 0, 100, sub{
          my ($redis, $res) = @_;
          for my $m (reverse @$res){
-            my $past_msg = {text => $m};
-            $self->pub_redis->publish('sadchat', $json->encode($past_msg));
+            $self->pub_redis->publish('sadchat', $m);
          }
       });
    # push sad msg events when they come down the tube.
@@ -378,18 +392,27 @@ sub sadchat{
          if($msg_data->{type} eq 'pong'){
             return;
          }
-         say "Message?: $msg";
 
          # not ping, not pong. so text...
          my $text = $msg_data->{text};
          return if length($text) > 400 or $text eq '';
+         my $time_ms = cur_time_ms();
+         my $speaker = $self->ident->{username};
+
+         say "Message?: $msg";
          # push to a redis queue which stores last 100 msgs.
          # most recent first..
-         $self->getset_redis->lpush(sadchat_messages => $text);
+         my $sad_msg_out = {
+            type => 'sad_msg',
+            text => $text,
+            time_ms => cur_time_ms(),
+            speaker => $speaker,
+         };
+         $sad_msg_out = $json->encode($sad_msg_out);
+         $self->getset_redis->lpush(sadchat_messages => $sad_msg_out);
          $self->getset_redis->ltrim(sadchat_messages => 0,99);
-         $self->getset_redis->lpush(sadchat_messages_all => $text);#archive?
-         my $out_msg = {text => $text};
-         $self->pub_redis->publish('sadchat', $json->encode($out_msg));
+         $self->getset_redis->lpush(sadchat_messages_all => $sad_msg_out);#archive?
+         $self->pub_redis->publish('sadchat', $sad_msg_out);
       });
 }
 

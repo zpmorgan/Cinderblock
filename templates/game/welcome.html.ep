@@ -1,5 +1,7 @@
 % layout 'foo_layout',
 
+<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/1.7.0/moment.min.js" type="text/javascript"></script>
+
 <script type="text/javascript">
    var chat_sock;
    $(document).ready(function(){
@@ -13,13 +15,13 @@
          }
          if(msg.type == 'pong')
             return;
-         spew_msg_to_some_div(msg.text);
+         spew_sad_msg_event_to_some_div(msg);
       };
       chat_sock.onclose= function () {
-         spew_msg_to_some_div('chat disconnected..');
+         spew_line_to_some_div('chat disconnected..');
       };
       chat_sock.onopen = function () {
-         spew_msg_to_some_div('connected...');
+         spew_line_to_some_div('connected...');
          var msg_field = $('#new-msg-input');
          msg_field.keypress(function(e){
             if (e.which == 13){ // 'enter'
@@ -28,8 +30,9 @@
                var sad_text = $(this).val();
                $(this).val('');
                var meta_msg = {
-                  type : 'new_msg_request',
+                  type : 'sad_msg',
                   text : sad_text,
+                  time : Date.now(),
                };
                chat_sock.send(JSON.stringify(meta_msg));
             }
@@ -39,10 +42,45 @@
          }, 10000);
       };
    });
-   function spew_msg_to_some_div(msg_text){
+   function spew_sad_msg_event_to_some_div(sad_event){
+      // sad_event: {text, speaker, time_ms};
+      var msgbox = $('#sad-msg-box');
+      var msgdiv = $('<div class="sad-foo-event" />');
+      
+      var msg_text_div = $('<div class="sad-foo-thing"style="float:left;"/>');
+      msg_text_div.css('width', "60%");
+      var msg_time_div = $('<div class="sad-foo-thing" style="float:right;"/>');
+      msg_time_div.css('width', "30%");
+      var msg_txt = $('<p />');
+      if(sad_event.speaker){
+         msg_txt.append($( '<b>'+ sad_event.speaker +'</b> '));
+      } else {
+         msg_txt.append($('<i>anon</i> '));
+      }
+      msg_txt.append(': ');
+      msg_txt.append(sad_event.text);
+      msg_text_div.append(msg_txt);
+      var epochms = sad_event.time_ms;
+      if (!epochms)
+         epochms = 45;
+      if (typeof(epochms) == 'string')
+         epochms = parseInt(epochms);
+      var moment_said = moment(epochms);
+      console.log(epochms);
+      console.log(sad_event);
+      //msg_time_div.text(moment_said.fromNow());
+      msg_time_div.text(moment_said.format('LT'));
+      msgdiv.append(msg_text_div);
+      msgdiv.append(msg_time_div);
+      msgbox.prepend(msgdiv);
+      msgdiv.append(sad_event.time);
+      msgdiv.append(' ');
+      msgdiv.append(moment_said);
+   }
+   function spew_line_to_some_div(line){
       var msgbox = $('#sad-msg-box');
       var msgdiv = $('<div />');
-      msgdiv.text(msg_text);
+      msgdiv.text(line);
       msgbox.prepend(msgdiv);
    }
 </script>
