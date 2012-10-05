@@ -19,6 +19,8 @@
             % } else {
                <a href="/login">Log in</a>
             % }
+            <span> sessid <%=sessid%> </span>
+            <span> ident id <%=ident()->{id}%> </span>
          </div>
       </div>
       % if(stash ('msg') // session('msg')){

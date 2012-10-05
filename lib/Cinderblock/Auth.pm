@@ -168,7 +168,7 @@ sub openid_return {
                # create new identity:
                my $new_ident_id = $self->redis_block(INCR => 'next_ident_id');
                $self->redis_block(HSET => 'ident_id_by_url', $vident->url, $new_ident_id);
-               my $ident = {
+               $ident = {
                   username => 'user' . $new_ident_id,
                   id => $new_ident_id,
                   email => undef,

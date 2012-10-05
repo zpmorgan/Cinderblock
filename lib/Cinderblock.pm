@@ -13,7 +13,7 @@ our $getset_redis;# = Mojo::Redis->new();
 our $block_redis;# = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
 #$block_redis->timeout(1<<29);
 our $model;
-
+use Carp;
 sub mention_on_err_and_close{ 
    my ($self,$redis, $nam) = @_;;
    $redis->on(error => sub{
@@ -21,6 +21,7 @@ sub mention_on_err_and_close{
          warn "[REDIS ERROR] $error\n";
          #warn "IOLOOP: ".
          if ($redis->ioloop != Mojo::IOLoop->singleton()){
+            Carp::confess;
             warn "stopping extra ioloop?";
             $redis->ioloop->stop;
             $block_redis = undef;
@@ -37,7 +38,7 @@ sub startup {
 
    my $config = $self->plugin('JSONConfig');
 
-   $self->secret('$skppxa>adsions->default_expiration(360000); #100 hours');
+   $self->secret('$skppxa>adsions->default_expikcvion(3fs00); #100 foos');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');

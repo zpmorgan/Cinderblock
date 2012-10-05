@@ -69,23 +69,6 @@ sub new_game{
    $self->render(text => 'phoo');
 }
 
-# get or set $role
-sub FOO_set_game_player{
-   my $self = shift;
-   my %opts = @_;
-   warn join ',',%opts;
-   my $sessid = $opts{sessid} // $self->sessid;
-   my $gameid = $opts{game_id} // $self->stash('game_id');
-   die unless $opts{color} =~ /^(b|w)$/;
-
-   my $roles = $self->redis_block(HGET => game_roles => $gameid);
-   $roles = $json->decode($roles);
-   $roles->{$opts{color}} = $sessid;
-   $roles = $json->encode($roles);
-   warn join '|',(HSET => game_roles => $gameid, $roles);
-   $self->redis_block(HSET => game_roles => $gameid, $roles);
-   #$self->redis_block(HSET => "gameroles:$gameid", $opts{color} => $sessid);
-}
 sub players_in_game{
    my $self = shift;
    my $game_id = shift;
@@ -114,10 +97,12 @@ sub be_invited{
    $self->model->set_game_player(
       game_id => $game_id,
       color => $invite->{color},
-      sessid => $self->sessid,);
+      ident_id => $self->ident->{id},);
 
    $self->redirect_to("/game/$game_id");
    $self->render(text => '');
+   say 'invitee sessid '.$self->sessid;
+   say 'invitee ident id '.$self->ident->{id};
 }
 
 sub do_game{
