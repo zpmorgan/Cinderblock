@@ -310,6 +310,10 @@ sub attempt_pass{
       $redis->hset(game => $game_id => $json->encode($game));
 #     PUB
       $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
+      my $penultimate_event = $game->{game_events}[-2];
+      if($penultimate_event->{type} eq 'pass'){ #passpass
+         $self->launch_score_mode;
+      }
    });
 }
 sub attempt_resign{
@@ -338,6 +342,15 @@ sub attempt_resign{
       $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
    });
 }
+         
+
+
+# after pass,pass
+sub launch_score_mode{
+   my $self = shift;
+}
+
+
 
 # Websocket.
 sub sadchat{

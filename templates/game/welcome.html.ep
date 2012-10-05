@@ -42,6 +42,9 @@
          }, 10000);
       };
    });
+   function html_escape_text(txt){
+      var escaped_text = $('<div></div>').text(txt).html();
+   }
    function spew_sad_msg_event_to_some_div(sad_event){
       // sad_event: {text, speaker, time_ms};
       var msgbox = $('#sad-msg-box');
@@ -51,31 +54,32 @@
       msg_text_div.css('width', "60%");
       var msg_time_div = $('<div class="sad-foo-thing" style="float:right;"/>');
       msg_time_div.css('width', "30%");
-      var msg_txt = $('<p />');
+      var msg_body = $('<p />');
       if(sad_event.speaker){
-         msg_txt.append($( '<b>'+ sad_event.speaker +'</b> '));
+         msg_body.append($( '<span style="font-weight:bold;" />').text(sad_event.speaker))
       } else {
-         msg_txt.append($('<i>anon</i> '));
+         msg_body.append($( '<span style="font-style:italic;" />').text(anon))
       }
-      msg_txt.append(': ');
-      msg_txt.append(sad_event.text);
-      msg_text_div.append(msg_txt);
+      msg_body.append(': ');
+      msg_body.append($( '<span />').text(sad_event.text));
+      msg_text_div.append(msg_body);
+
       var epochms = sad_event.time_ms;
       if (!epochms)
          epochms = 45;
       if (typeof(epochms) == 'string')
          epochms = parseInt(epochms);
       var moment_said = moment(epochms);
-      console.log(epochms);
-      console.log(sad_event);
-      //msg_time_div.text(moment_said.fromNow());
+      //console.log(epochms);
+      //console.log(sad_event);
       msg_time_div.append($('<p />').append(moment_said.format('LT')));
+
       msgdiv.append(msg_text_div);
       msgdiv.append(msg_time_div);
       msgbox.prepend(msgdiv);
-      msgdiv.append(sad_event.time);
-      msgdiv.append(' ');
-      msgdiv.append(moment_said);
+      //msgdiv.append(sad_event.time);
+      //msgdiv.append(' '); //what?
+      //msgdiv.append(moment_said);
    }
    function spew_line_to_some_div(line){
       var msgbox = $('#sad-msg-box');
