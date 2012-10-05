@@ -121,13 +121,13 @@
             <img class='players-panel-giant-stone' src="/b.png">
             %= stash('b_ident')->{username}
             <br /> caps:
-            <span class="captures captures-b"> </span>
+            <span class="captures captures-b">0</span>
          </div>
          <div class="players-panel-player rel-right">
             <img class='players-panel-giant-stone' src="/w.png">
             %= stash('w_ident')->{username}
             <br /> caps:
-            <span class="captures captures-w" > </span>
+            <span class="captures captures-w" >0</span>
          </div>
          <table style="width:100%">
             <tr>
