@@ -50,7 +50,6 @@ sub startup {
       unless ($sessid){
          $sessid = $self->redis_block(incr => 'next_session_id');
          $self->session(session_id => $sessid);
-         $self->redis_block(SET => "session:$sessid" => '{}');
       }
       return $sessid;
    });
