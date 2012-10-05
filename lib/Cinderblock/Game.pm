@@ -92,7 +92,6 @@ sub be_invited{
    }
    $invite = $json->decode($invite);
    my $game_id = $invite->{game_id};
-   say $invite->{color} . ", $game_id, ".$self->sessid;# = $invite->{game_id};
    # $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
    $self->model->set_game_player(
       game_id => $game_id,
@@ -101,8 +100,8 @@ sub be_invited{
 
    $self->redirect_to("/game/$game_id");
    $self->render(text => '');
-   say 'invitee sessid '.$self->sessid;
-   say 'invitee ident id '.$self->ident->{id};
+   #say 'invitee sessid '.$self->sessid;
+   #say 'invitee ident id '.$self->ident->{id};
 }
 
 sub do_game{

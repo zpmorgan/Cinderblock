@@ -6,7 +6,6 @@ use Mojo::Redis;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-
 has block_redis => (
    isa => 'Mojo::Redis',
    builder => '_new_blocking_redis',
@@ -30,6 +29,7 @@ sub _new_blocking_redis{
          # confess;
          $redis->ioloop->stop;
          $self->block_redis($self->_new_blocking_redis);
+         confess();
       });
    $block_redis->timeout(1<<29);
    return $block_redis 
@@ -56,6 +56,7 @@ sub game_role_ident{ # ($game_id, 'w'
    my $game_roles_json = $self->redis_block(HGET => game_roles => $game_id);
    my $game_roles = $json->decode($game_roles_json);
    my $ident_id = $game_roles->{$role};
+   return unless $ident_id; #invitee unarrived...
    my $ident = $self->redis_block(HGET => ident => $ident_id);
    return $json->decode($ident);
 }
