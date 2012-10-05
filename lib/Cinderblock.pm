@@ -37,7 +37,7 @@ sub startup {
 
    my $config = $self->plugin('JSONConfig');
 
-   $self->secret('$skppxa>sessions->default_expiration(360000); #100 hours');
+   $self->secret('$skppxa>adsions->default_expiration(360000); #100 hours');
    $self->sessions->default_expiration(360000); #100 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
