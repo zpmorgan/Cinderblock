@@ -72,6 +72,10 @@
                relevantView.playMoveSound();
             }
             });
+         relevantView.setOnCapturesChange(function(color, new_num){
+               var caps_elem = $('span.captures-'+color);
+               caps_elem.text(new_num);
+               });
          $("#bbackb").click(function(){
             relevantView.virtuallyGoToStart();
             });
@@ -116,10 +120,14 @@
          <div class="players-panel-player rel-left">
             <img class='players-panel-giant-stone' src="/b.png">
             %= stash('b_ident')->{username}
+            <br /> caps:
+            <span class="captures captures-b"> </span>
          </div>
          <div class="players-panel-player rel-right">
             <img class='players-panel-giant-stone' src="/w.png">
             %= stash('w_ident')->{username}
+            <br /> caps:
+            <span class="captures captures-w" > </span>
          </div>
          <table style="width:100%">
             <tr>

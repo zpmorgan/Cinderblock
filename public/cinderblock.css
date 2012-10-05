@@ -266,3 +266,6 @@ img.players-panel-giant-stone{
 p{
    margin: .25em; padding: 0;
 }
+span.captures{
+   font-weight:bold;
+}

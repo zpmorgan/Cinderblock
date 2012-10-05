@@ -243,8 +243,10 @@ Class ('CinderblockView', {
       // TODO:to 'view'
       //this.virtual_board = new GridBoard({w: this.game.w, h: this.game.h});
       virtualMoveNum: {is:'rw',init:0},
+      virtualCaptures: {is:'ro',init: {w:0,b:0}},
       canvasFinagled : {is:'rw', required:false},
       onVirtualMoveChange : function(move_num){},
+      onCapturesChange : function(color, new_val){},
    },
    methods: {
       canvasWidth:  function(){return this.getFinalCanvas().width},
@@ -337,6 +339,7 @@ Class ('CinderblockView', {
          cnvs.width = calc_canvas_dims.w;
          cnvs.height = calc_canvas_dims.h;
          
+         // this sucks. how to best determine available space?
          $('div.middoblock').width ( Math.floor(cnvs.width) );
          var margin = this.margin = this.calc_stone_size / 2;
       // TODO: kill grid_box
@@ -770,9 +773,13 @@ Class ('CinderblockView', {
       setOnVirtualMoveChange : function(cb){
          this.onVirtualMoveChange = cb;
       },
+      setOnCapturesChange: function(cb){
+         this.onCapturesChange = cb;
+      },
 
       // Time controls
       virtuallyGoToMove : function(destMoveNum){
+         var view = this;
          this.game.log ('gotomove: '+ this.virtualMoveNum + '->' + destMoveNum);
          if(destMoveNum == this.virtualMoveNum){
             return;
@@ -784,6 +791,12 @@ Class ('CinderblockView', {
                var event_to_apply = this.game.game_events[this.virtualMoveNum];
                if(event_to_apply.delta != null)
                   this.applyDeltaToCanvas(event_to_apply.delta);
+               if(event_to_apply.captures != null){
+                  $.each(event_to_apply.captures, function(color,diff){
+                     view.virtualCaptures[color] += diff;
+                     view.onCapturesChange(color, view.virtualCaptures[color]);
+                  });
+               }
                this.virtualMoveNum++;
                //this.log (this.virtualMoveNum+1);
                //this.log (this.virtualMoveNum);
@@ -806,6 +819,12 @@ Class ('CinderblockView', {
                      'remove' : adds,
                   };
                   this.applyDeltaToCanvas(reversed_delta);
+               }
+               if(event_to_apply.captures != null){
+                  $.each(event_to_apply.captures, function(color,diff){
+                     view.virtualCaptures[color] -= diff;
+                     view.onCapturesChange(color, view.virtualCaptures[color]);
+                  });
                }
                this.virtualMoveNum--;
             }

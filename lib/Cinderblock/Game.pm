@@ -240,7 +240,7 @@ sub attempt_move{
          my $board = $game->{board};
          my ($newboard,$fail,$caps) =
             $rulemap->evaluate_move($board, $node, $stone);
-            #my $collision = $board->[$row][$col];
+         # $caps is just a list of nodes.
          if($fail){return}
          # now normalize & hash the board, check for collisions, & later store hash in event..
          my $normalized_state = $stone .':'. $rulemap->normalize_board_to_string($newboard);
@@ -263,6 +263,9 @@ sub attempt_move{
             node => [$row,$col],
             delta => $delta,
          };
+         if (scalar @$caps){
+            $game_event->{captures}{$stone} = scalar @$caps;
+         }
          push @{$game->{game_events}}, $game_event;
          if (@{$game->{game_events}} > 3){ # active enough.
             $self->promote_game_activity($game_id);
@@ -303,8 +306,6 @@ sub attempt_pass{
          color => $color,
          turn_after => $game->{turn},
          time_ms => cur_time_ms(),
-         # node => [$row,$col],
-         # delta => $delta,
       };
       push @{$game->{game_events}}, $event;
       $redis->hset(game => $game_id => $json->encode($game));
