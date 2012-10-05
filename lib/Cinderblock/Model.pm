@@ -55,10 +55,7 @@ sub game_role_ident{ # ($game_id, 'w'
    my ($self,$game_id, $role) = @_;
    my $game_roles_json = $self->redis_block(HGET => game_roles => $game_id);
    my $game_roles = $json->decode($game_roles_json);
-   my $sessid = $game_roles->{$role};
-   return unless $sessid;
-   my $ident_id = $self->redis_block(HGET => session_ident => $sessid);
-   return unless $ident_id;
+   my $ident_id = $game_roles->{$role};
    my $ident = $self->redis_block(HGET => ident => $ident_id);
    return $json->decode($ident);
 }
