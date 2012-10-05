@@ -820,8 +820,8 @@ Class ('CinderblockView', {
                   };
                   this.applyDeltaToCanvas(reversed_delta);
                }
-               if(event_to_apply.captures != null){
-                  $.each(event_to_apply.captures, function(color,diff){
+               if(event_to_reverse.captures != null){
+                  $.each(event_to_reverse.captures, function(color,diff){
                      view.virtualCaptures[color] -= diff;
                      view.onCapturesChange(color, view.virtualCaptures[color]);
                   });
