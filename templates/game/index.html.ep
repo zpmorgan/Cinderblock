@@ -175,19 +175,25 @@
       <canvas id="goban" width="550" height="550"></canvas>
    </div>
 
+   <script>
+      $(document).ready(function() {
+         $( "#rightotabs" ).tabs();
+      });
+   </script>
 
    <div class="rightoblock">
-      <div class="sock-event-box">
+      <div id="rightotabs">
+         <ul>
+            <li><a href="#rightotabs-1">Chat</a></li>
+            <li><a href="#rightotabs-2">Debug</a></li>
+         </ul>
+
+         <div id="rightotabs-1" class="happy-chat"> </div>
+         <div id="rightotabs-2" class="sock-event-box"> </div>
       </div>
    </div>
    <div class="fooblock"> </div>
 </div>
 </div>
-
-
-
-<script type="text/javascript">
-</script>
-
 
 </body></html>

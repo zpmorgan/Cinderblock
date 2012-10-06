@@ -86,17 +86,38 @@ div.middoblock{
 div.rightoblock{
    display: table-cell;
    width: 240px;
-   background: DarkGreen;
+   /*background: DarkGreen;*/
    vertical-align:top;
 }
 
+ul.ui-tabs-nav{
+   background:none;
+}
+.ui-tabs .ui-tabs-nav li a ,
+.ui-tabs .ui-tabs-nav {
+   padding: 0 0;
+   background:none;
+}
+.ui-widget-header {
+   border:0;
+}
+
+.ui-tabs .ui-tabs-panel {
+   padding: .1em .1em;
+   word-break:break-all;
+   font-size: 0.7em;
+   background:none;
+}
+.ui-tabs {
+   background:none;
+}
 
 .sock-event-box{
    /* width: 30% */;
    background: LightGrey;
    min-height:400px;
-   max-height:600px;
-   width: 100%;
+   max-height:600px;*/
+   /* width: 100%; */
    border: 1px solid black;
    overflow-y:scroll;
    overflow-x:hidden;
@@ -269,3 +290,5 @@ p{
 span.captures{
    font-weight:bold;
 }
+
+
