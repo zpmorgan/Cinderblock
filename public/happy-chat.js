@@ -93,7 +93,7 @@ Class('HappyChat', {
 
 function _build_input_field(){
    var chat = this;
-   var input_field = $('<input type="textfield" />');
+   var input_field = $('<input type="textfield" maxlength="360" />');
    this.elem.prepend(input_field);
    input_field.keypress(function(e){
       if (e.which == 13){ // 'enter'
