@@ -294,6 +294,7 @@ a:active {
    float:left;
    /*word-break:hyphenate;*/
    word-wrap: break-word;
+   text-align: left;
 }
 .happy-submessage-time{
    width: 23%;

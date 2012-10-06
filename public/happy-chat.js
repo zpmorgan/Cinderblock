@@ -66,7 +66,6 @@ Class('HappyChat', {
             hc.displayMessage (msg);
          };
          this.chat_sock.onclose= function () {
-            spew_line_to_some_div('chat disconnected..');
             hc.displayMessage ({
                speaker: 'Cinderblock',
                text: 'chat socket closed.',
