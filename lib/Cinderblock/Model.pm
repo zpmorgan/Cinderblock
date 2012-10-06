@@ -6,12 +6,37 @@ use Mojo::Redis;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
+has pub_redis => (
+   isa => 'Mojo::Redis',
+   is => 'rw',
+   lazy => 1,
+   default => sub{
+      Mojo::Redis->new()->timeout(1<<28);
+   },
+);
+has getset_redis => (
+   isa => 'Mojo::Redis',
+   is => 'rw',
+   lazy => 1,
+   default => sub{
+      my $r = Mojo::Redis->new()->timeout(1<<28);
+      $r->on(error => sub{
+         my($redis, $error) = @_;
+         say "[getset REDIS ERROR!] $error";
+      });
+      $r->on(close => sub{warn 'getset redis closes???'});
+      $r;
+   },
+);
+
 has block_redis => (
    isa => 'Mojo::Redis',
    builder => '_new_blocking_redis',
    is => 'rw',
 );
+
 use Carp qw/confess/;
+
 sub _new_blocking_redis{
    my $self = shift;
    my $block_redis = Mojo::Redis->new(ioloop => Mojo::IOLoop->new);
@@ -21,7 +46,7 @@ sub _new_blocking_redis{
          say "stopping extra ioloop?";
          $redis->ioloop->stop;
          $self->block_redis($self->_new_blocking_redis);
-      });
+      }); 
    $block_redis->on(error => sub{
          my($redis, $error) = @_;
          say "[blocking REDIS ERROR!] $error";

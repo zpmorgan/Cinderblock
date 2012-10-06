@@ -359,7 +359,7 @@ sub happychat{
    
    # push sad msg events when they come down the tube.
    my $hc_channel_name = 'happychat_'.$channel_name ;
-   warn('channel: ' . $hc_channel_name);
+   # warn('channel: ' . $hc_channel_name);
    $sub_redis->subscribe($hc_channel_name => sub{
          my ($redis, $event) = @_;
          return if $event->[0] eq 'subscribe';

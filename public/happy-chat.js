@@ -48,6 +48,8 @@ Class('HappyChat', {
          msgdiv.append(msg_text_div);
          msgdiv.append(msg_time_div);
          this.messages_elem.prepend(msgdiv);
+
+         this._msg_audio.play();
       },
       openSocket: function(){
          var hc = this;
@@ -87,6 +89,9 @@ Class('HappyChat', {
       initialize: function(){
          this.setOnMsgRequest(function(){});
          this.openSocket();
+         var audio = $("<audio src='/43683__stijn__click6b.wav' id='move-sound' />");
+         $('body').append(audio);
+         this._msg_audio = audio[0];
       },
    },
 });
