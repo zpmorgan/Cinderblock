@@ -357,7 +357,6 @@ sub happychat{
    my $sub_redis = $self->model->new_sub_redis();
    $self->stash(hc_redis => $sub_redis);
    
-   warn $sub_redis->connected;;
    # push sad msg events when they come down the tube.
    my $hc_channel_name = 'happychat_'.$channel_name ;
    warn('channel: ' . $hc_channel_name);
@@ -396,7 +395,6 @@ sub happychat{
       #$self->getset_redis->lpush(happychat_messages => $happy_msg_out);
       #$self->getset_redis->ltrim(happychat_messages => 0,99);
       #$self->getset_redis->lpush(happychat_messages_all => $happy_msg_out);#archive?
-      warn $self->pub_redis->connected;
       $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
    });
 }

@@ -72,7 +72,7 @@ div.fooblock{
 div.leftoblock{
    display: table-cell;
    width: 160px;
-   background-color: rgba(73, 105, 94, 0.71);
+   background-color: rgba(143, 167, 159, 0.71);
    text-align:center;
    vertical-align:top;
 }

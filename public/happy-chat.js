@@ -95,7 +95,7 @@ function _build_input_field(){
    var chat = this;
    var input_field = $('<input type="textfield" maxlength="360" />');
    this.elem.prepend(input_field);
-   input_field.keypress(function(e){
+   input_field.keydown(function(e){
       if (e.which == 13){ // 'enter'
          if ($(this).val() == '') {
             return; }
@@ -110,6 +110,7 @@ function _build_input_field(){
          chat.onMsgRequest(happy_msg_req);
          chat.chat_sock.send(JSON.stringify(happy_msg_req));
       }
+      e.stopPropagation();
    });
    return input_field;
 }
