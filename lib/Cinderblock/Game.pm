@@ -343,29 +343,69 @@ sub attempt_resign{
    });
 }
          
-
-
 # after pass,pass
 sub launch_score_mode{
    my $self = shift;
 }
 
 
+# Websocket.
+sub happychat{
+   my $self = shift;
+   my $ws = $self->tx;
+   my $channel_name = $self->stash('channel');
+   my $sub_redis = $self->model->new_sub_redis();
+   $self->stash(hc_redis => $sub_redis);
+   
+   warn $sub_redis->connected;;
+   # push sad msg events when they come down the tube.
+   my $hc_channel_name = 'happychat_'.$channel_name ;
+   warn('channel: ' . $hc_channel_name);
+   $sub_redis->subscribe($hc_channel_name => sub{
+         my ($redis, $event) = @_;
+         return if $event->[0] eq 'subscribe';
+         $ws->send($event->[2]);
+      });
+   $self->on(message => sub {
+      my ($ws, $msg) = @_;
+      my $msg_data = $json->decode($msg);
+      if($msg_data->{type} eq 'ping'){
+         $ws->send($json->encode({type=>'pong'}));
+         return;
+      }
+      if($msg_data->{type} eq 'pong'){
+         return;
+      }
+
+      # not ping, not pong. so text...
+      my $text = $msg_data->{text};
+      return if length($text) > 400 or $text eq '';
+      my $time_ms = cur_time_ms();
+      my $speaker = $self->ident->{username};
+
+      say "[$channel_name Message] $speaker: $msg";
+      # push to a redis queue which stores last 100 msgs.
+      # most recent first..
+      my $happy_msg_out = {
+         type => 'happy_msg',
+         text => $text,
+         time_ms => cur_time_ms(),
+         speaker => $speaker,
+      };
+      $happy_msg_out = $json->encode($happy_msg_out);
+      #$self->getset_redis->lpush(happychat_messages => $happy_msg_out);
+      #$self->getset_redis->ltrim(happychat_messages => 0,99);
+      #$self->getset_redis->lpush(happychat_messages_all => $happy_msg_out);#archive?
+      warn $self->pub_redis->connected;
+      $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
+   });
+}
 
 # Websocket.
 sub sadchat{
    my $self = shift;
    my $ws = $self->tx;
-   my $sub_redis = Mojo::Redis->new(timeout => 2*3600);
-   $sub_redis->timeout(2*3600);
-   $sub_redis->on(error => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS ERROR] $error\n";
-      });
-   $sub_redis->on(close => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS] CLOSE...\n";
-      });
+   my $sub_redis = $self->model->new_sub_redis;
    $self->stash(sub_redis => $sub_redis);
 
    $self->getset_redis->lrange('sadchat_messages', 0, 100, sub{
@@ -393,6 +433,7 @@ sub sadchat{
 
          # not ping, not pong. so text...
          my $text = $msg_data->{text};
+         warn $text;
          return if length($text) > 400 or $text eq '';
          my $time_ms = cur_time_ms();
          my $speaker = $self->ident->{username};

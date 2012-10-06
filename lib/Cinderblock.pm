@@ -148,6 +148,7 @@ sub startup {
    # routes to game controller
    $r->get('/')->to('game#welcome');
    $r->websocket('/sadchat/')->to('game#sadchat');
+   $r->websocket('/happy/:channel')->to('game#happychat');
    $r->get('/activity/')->to('game#activity');
    $r->get('/new_game/')->to('game#new_game_form');
    $r->post('/new_game/')->to('game#new_game');

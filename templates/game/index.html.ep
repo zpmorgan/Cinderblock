@@ -110,7 +110,10 @@
       };
    });
    $(document).ready(function(){
-         var hc =  $('.game-happy-chat').happyChat();
+         var hc =  $('.game-happy-chat').happyChat({
+            ws_url_base : "<%= ws_url_base() %>/happy", 
+            channel: "game_<%= $game_id %>", 
+         });
          hc.displayMessage({speaker:'cows', time:123, text:'moo'});
    });
 

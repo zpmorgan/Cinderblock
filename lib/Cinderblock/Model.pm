@@ -50,6 +50,24 @@ sub redis_block{
    return @results;
 };
 
+
+
+sub new_sub_redis{
+   my $self = shift;
+   my $sub_redis = Mojo::Redis->new();
+   $sub_redis->timeout(2*3600);
+   $sub_redis->on(error => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS ERROR] $error\n";
+      });
+   $sub_redis->on(close => sub{
+         my($redis, $error) = @_;
+         warn "[sub_REDIS] CLOSE...\n";
+      });
+   $sub_redis->connect;
+   return $sub_redis;
+}
+
 # get role...
 sub game_role_ident{ # ($game_id, 'w'
    my ($self,$game_id, $role) = @_;

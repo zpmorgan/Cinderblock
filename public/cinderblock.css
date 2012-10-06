@@ -72,7 +72,7 @@ div.fooblock{
 div.leftoblock{
    display: table-cell;
    width: 160px;
-   background: DarkGrey;
+   background-color: rgba(73, 105, 94, 0.71);
    text-align:center;
    vertical-align:top;
 }
@@ -85,7 +85,7 @@ div.middoblock{
 }
 div.rightoblock{
    display: table-cell;
-   width: 240px;
+   width: 340px;
    /*background: DarkGreen;*/
    vertical-align:top;
 }
@@ -104,7 +104,6 @@ ul.ui-tabs-nav{
 
 .ui-tabs .ui-tabs-panel {
    padding: .1em .1em;
-   word-break:break-all;
    font-size: 0.7em;
    background:none;
 }
@@ -113,7 +112,8 @@ ul.ui-tabs-nav{
 }
 
 .sock-event-box{
-   /* width: 30% */;
+   /*word-break:break-all;*/
+   word-wrap: break-word;
    background: LightGrey;
    min-height:400px;
    max-height:600px;*/
@@ -289,13 +289,17 @@ a:active {
    border: 2px solid #161A17;
    margin: 2px;
 }
-   /*font-size: 15px;*/
-
-
-.floatleft{
-   float:left;}
-.floatright{
+.happy-submessage-body{
+   width: 73%;
+   float:left;
+   /*word-break:hyphenate;*/
+   word-wrap: break-word;
+}
+.happy-submessage-time{
+   width: 23%;
    float:right;}
+
+
 div.rel-right{right:0}
 div.rel-left{left:0}
 div.players-panel{
