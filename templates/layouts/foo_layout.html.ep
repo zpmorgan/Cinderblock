@@ -11,6 +11,8 @@
    <body>
       <div class="tinyheader">
          <div class="tinyheadercenter">
+            <a href="/">/</a>
+            <a href="/about">About</a>
             <a href="/new_game">New game</a>
             <a href="/activity">Activity</a>
             % if (logged_in()) {
