@@ -1,0 +1,20 @@
+% layout 'foo_layout',
+
+<div class="wrapperblock ">
+   <div style="height: 40px; display:block;margin:0 auto"> </div>
+   <div class="welcome rounded-corners colors-light-on-dark">
+      <p>
+         The Cinderblock Go Server is capable of realtime or correspondence-style
+         Go games on a planar, cylindrical, or toroidal board. It supports board
+         sizes from 2 to 30 nodes in either dimension.
+      </p> <p>
+         The stones are 
+         <a href="https://github.com/zpmorgan/gostones-render">rendered in povray</a>, 
+         and use Nicolas Rougier's gostones library.
+      </p><p>
+         The board texture is from 
+         <a href="http://www.whitemagicsoftware.com/software/java/jigo/">JiGo</a> 
+         &amp; is licensed under the apache license.
+      </p>
+   </div>
+</div>
