@@ -358,8 +358,16 @@ sub happychat{
    $self->stash(hc_redis => $sub_redis);
    
    # push sad msg events when they come down the tube.
+   # put into a redis list:
+   my $channel_store_name = "hc:$channel_name";
+   #publish in a channel:
    my $hc_channel_name = 'happychat_'.$channel_name ;
-   # warn('channel: ' . $hc_channel_name);
+   $self->getset_redis->lrange($channel_store_name , 0,-1, sub{
+         my ($redis,$msgs) = @_;
+         for my $m (@$msgs){
+            $ws->send($m);
+         }
+   });
    $sub_redis->subscribe($hc_channel_name => sub{
          my ($redis, $event) = @_;
          return if $event->[0] eq 'subscribe';
@@ -392,10 +400,10 @@ sub happychat{
          speaker => $speaker,
       };
       $happy_msg_out = $json->encode($happy_msg_out);
-      #$self->getset_redis->lpush(happychat_messages => $happy_msg_out);
+      $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
+      $self->getset_redis->rpush($channel_store_name => $happy_msg_out);
       #$self->getset_redis->ltrim(happychat_messages => 0,99);
       #$self->getset_redis->lpush(happychat_messages_all => $happy_msg_out);#archive?
-      $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
    });
 }
 
