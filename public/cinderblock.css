@@ -273,7 +273,7 @@ a:active {
    color: #FFFBC8;
    background: #011013;
    margin: 0 auto;
-   min-height: 300px;
+   min-height: 200px;
    max-height: 400px;
    width:98%;
    display: block;
@@ -299,6 +299,16 @@ a:active {
 .happy-submessage-time{
    width: 23%;
    float:right;}
+
+.welcome-happy-chat{
+   max-width: 55em;
+   max-height: 7em;
+   margin: 0 auto;
+}
+.welcome-happy-chat .happy-chat-messages{
+   max-height: 300px;
+}
+
 
 
 div.rel-right{right:0}

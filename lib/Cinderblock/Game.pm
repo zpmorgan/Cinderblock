@@ -402,8 +402,11 @@ sub happychat{
       $happy_msg_out = $json->encode($happy_msg_out);
       $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
       $self->getset_redis->rpush($channel_store_name => $happy_msg_out);
-      #$self->getset_redis->ltrim(happychat_messages => 0,99);
-      #$self->getset_redis->lpush(happychat_messages_all => $happy_msg_out);#archive?
+      my $do_trim = ($channel_name =~ /welcome/) ? 1 : 0;
+      if($do_trim){
+         $self->getset_redis->ltrim($channel_store_name => -99,-1);
+         $self->getset_redis->rpush("archive:$channel_store_name" => $happy_msg_out);#archive?
+      }
    });
 }
 
