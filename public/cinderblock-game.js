@@ -77,10 +77,6 @@ Class( 'GridBoard', {
    },
 });
 
-//   this.shadow_decor = null;
-  // this.lastmove_decor = null;
-
-
 
 Class('CinderblockGame', {
    has: {
@@ -218,6 +214,15 @@ Class('CinderblockGame', {
          };
          this.sock.send(JSON.stringify(attempt));
       },
+      attemptToggle : function(node){
+         var attempt = {
+            action: 'attempt_toggle',
+            resign_attempt: {
+               "node" : node,
+            }
+         };
+         this.sock.send(JSON.stringify(attempt));
+      },
       timeSinceInitializedInMs : function(){
          if(!this.time_initialized)
             return -1;
@@ -247,10 +252,12 @@ Class ('CinderblockView', {
       canvasFinagled : {is:'rw', required:false},
       onVirtualMoveChange : function(move_num){},
       onCapturesChange : function(color, new_val){},
+      state : {is : 'rw', init : 'void'},
    },
    methods: {
       canvasWidth:  function(){return this.getFinalCanvas().width},
       canvasHeight: function(){return this.getFinalCanvas().height},
+
 
       can_move : function(){
          if(PORTAL_DATA.role == 'watcher')
@@ -265,7 +272,6 @@ Class ('CinderblockView', {
          }); 
          return can_move;
       },
-
 
 
       drawLines : function(){
@@ -363,11 +369,17 @@ Class ('CinderblockView', {
          $(this.getFinalCanvas()).mousedown(function(e_down){
             // left mouse button == Move!
             if(e_down.which == 1){
-               if(!view.can_move()) {return;}
                var point = mouseEventToRelative(e_down);
                var boardnode = view.canvasXYToNode(point[0],point[1]);
                if(!boardnode){ return;}
-               view.game.attemptMove(boardnode);
+               if(view.can_move()) {
+                  view.game.attemptMove(boardnode);
+                  return;
+               }
+               if(view.can_toggle_chain_state()) {
+                  view.game.attemptToggle(boardnode);
+                  return;
+               }
             }
             // right mouse button == drag!
             if(e_down.which == 3){

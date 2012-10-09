@@ -1,10 +1,13 @@
 package Cinderblock::Model;
 #use Modern::Perl;
 use 5.16.0;
-use Moose;
+#use Moose;
+use MooseX::Singleton;
 use Mojo::Redis;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
+
+use Cinderblock::Model::Game;
 
 has pub_redis => (
    isa => 'Mojo::Redis',
@@ -92,6 +95,19 @@ sub new_sub_redis{
    $sub_redis->connect;
    return $sub_redis;
 }
+
+
+# get game.. 
+sub game{
+   my ($self,$game_id) = @_;
+   return Cinderblock::Model::Game->from_id($game_id);
+   my $game = $self->redis_block(hget => game => $game_id);
+   $game = $json->decode($game);
+   $game = Cinderblock::Model::Game->new(data => $game);
+   return $game;
+}
+
+
 
 # get role...
 sub game_role_ident{ # ($game_id, 'w'

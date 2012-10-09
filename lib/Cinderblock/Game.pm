@@ -196,6 +196,9 @@ sub game_event_socket{
          elsif($action eq 'attempt_resign'){
             $self->attempt_resign($msg_data);
          }
+         elsif($action eq 'attempt_toggle'){
+            $self->attempt_toggle_stone_state($msg_data);
+         }
       });
    $self->on(finish => sub {
          my $ws = shift;
@@ -286,35 +289,30 @@ sub publish_game_event{
 sub attempt_pass{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->hget (game => $game_id => sub{
-      my ($redis,$game) = @_;
-      $game = $json->decode($game);
-      my $status = $game->{status} // 'active';
-      return unless $status eq 'active';
-
-      my $turn = $game->{turn};
-      my $color = $msg->{pass_attempt}{color};
-      return unless $color eq $turn;
-      my $roles = $self->players_in_game($game_id);
-      my $relevent_ident_id = $roles->{$color};
-      return unless (defined $relevent_ident_id);
-      return unless ($relevent_ident_id == $self->ident->{id});
-      $game->{turn} = ($color eq 'w') ? 'b' : 'w';
-      my $event = {
-         type => 'pass', 
-         color => $color,
-         turn_after => $game->{turn},
-         time_ms => cur_time_ms(),
-      };
-      push @{$game->{game_events}}, $event;
-      $redis->hset(game => $game_id => $json->encode($game));
-#     PUB
-      $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
-      my $penultimate_event = $game->{game_events}[-2];
-      if($penultimate_event->{type} eq 'pass'){ #passpass
-         $self->launch_score_mode;
-      }
-   });
+   my $game = $self->model->game($game_id);
+   return unless $game->status eq 'active';
+   my $turn = $game->turn;
+   my $color = $msg->{pass_attempt}{color};
+   return unless $color eq $turn;
+   my $roles = $self->players_in_game($game_id);
+   my $turn_ident = $self->model->game_role_ident($game_id, 'b') // {};
+   return unless (defined $turn_ident);
+   return unless ($turn_ident->{id} == $self->ident->{id});
+   # success!
+   $game->turn ($game->next_turn);
+   my $event = {
+      type => 'pass', 
+      color => $color,
+      turn_after => $game->turn,
+      time_ms => cur_time_ms(),
+   };
+   $game->push_event($event);
+   #$self->model->pub_redis->publish("game_events:$game_id" => $json->encode($event));
+   if($game->is_doubly_passed){
+      #   $game->set_status_scoring;
+   }
+   $game->update();
+   return;
 }
 sub attempt_resign{
    my ($self,$msg) = @_;
@@ -342,10 +340,23 @@ sub attempt_resign{
       $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
    });
 }
+sub attempt_toggle_stone_state{
+   my ($self,$msg) = @_;
+   my $game_id = $self->stash('game_id');
+   my $game = $self->model->redis_block(hget => game => $game_id);
+   $game = $json->decode($game);
+
+   my $status = $game->{status} // 'active';
+   return unless $game->{status} eq 'scoring';
+}
          
 # after pass,pass
 sub launch_score_mode{
+   die;
    my $self = shift;
+   my $game = $self->model->game('id');
+   $game->adjust_state(status => 'scoring');
+   $game->update();
 }
 
 

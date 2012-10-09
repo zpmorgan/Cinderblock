@@ -9,7 +9,7 @@ use Mojo::Redis;
 our $pub_redis;# = Mojo::Redis->new();
 #our $getset_redis;# = Mojo::Redis->new();
 
-our $model;
+our $model = Cinderblock::Model->instance;
 use Carp;
 sub mention_on_err_and_close{ 
    my ($self,$redis, $nam) = @_;;
@@ -28,9 +28,16 @@ sub startup {
    my $config = $self->plugin('JSONConfig');
 
    $self->secret('$skppxa>adsions->default_expikcvion(3fs00); #100 foos');
-   $self->sessions->default_expiration(360000); #100 hours
+   $self->sessions->default_expiration(3600000); #1000 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
+
+   $self->helper (model => sub{
+      #return $model if $model;
+      #$model = Cinderblock::Model->new();
+      #it's a singleton now.
+      return $model;
+   });
 
    #get or generate a unique id for this session
    $self->helper(sessid => sub{
@@ -85,21 +92,6 @@ sub startup {
          my $self = shift;
          return $self->model->getset_redis;
       });
-   my $flsjwfwef = q"
-   sub g{
-      return $getset_redis if $getset_redis;
-      $getset_redis = Mojo::Redis->new();
-      $getset_redis->timeout(1<<29);
-      $app->mention_on_err_and_close($getset_redis, 'getset_redis');
-      return $getset_redis;
-   };;
-   $self->helper (pub_redis => sub{
-      return $pub_redis if $pub_redis;
-      $pub_redis = Mojo::Redis->new();
-      $pub_redis->timeout(1<<29);
-      $app->mention_on_err_and_close($pub_redis, 'pub_redis');
-      return $pub_redis;
-   });";
    $self->helper (ws_url_base => sub{
          my $self = shift;
          my $ws_url_base = $self->req->url->base;
@@ -109,11 +101,6 @@ sub startup {
          }
          return $ws_url_base;
       });
-   $self->helper (model => sub{
-      return $model if $model;
-      $model = Cinderblock::Model->new();
-      return $model;
-   });
 
    # Router
    my $r = $self->routes;
