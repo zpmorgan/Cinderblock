@@ -79,29 +79,22 @@ sub players_in_game{
 sub be_invited{
    my $self = shift;
    my $code = $self->stash('invite_code');
-   my $key = "invite:$code";
-   my @res = $self->redis_block(
-      ['multi'],
-      [get => $key],
-      [del => $key],
-      ['exec']
-   );
-   my ($invite, $del) = @{$res[3]};
-   unless ($invite){
-      return $self->render_text("invite code not found or already used.")
-   }
+   my $invite = $self->model->redis_block(HGET => invite => $code);
    $invite = $json->decode($invite);
-   my $game_id = $invite->{game_id};
-   # $self->redis_block(HSET => "gameroles:$game_id", $invite->{color} => $self->sessid);
-   $self->model->set_game_player(
-      game_id => $game_id,
-      color => $invite->{color},
-      ident_id => $self->ident->{id},);
+   # invite: {game_id => $game_id, color => $other_color};
 
+   my $game_id = $invite->{game_id};
+   my $color = $invite->{color};
+   my $current_role_ident = $self->model->game_role_ident( $game_id, $color);
+   unless ($current_role_ident){
+      $self->model->set_game_player(
+         game_id => $game_id,
+         color => $invite->{color},
+         ident_id => $self->ident->{id},
+      );
+   }
    $self->redirect_to("/game/$game_id");
    $self->render(text => '');
-   #say 'invitee sessid '.$self->sessid;
-   #say 'invitee ident id '.$self->ident->{id};
 }
 
 sub do_game{
@@ -137,9 +130,8 @@ sub do_game{
          my $other_color = ($self->stash('my_colors')->[0] eq'b') ?'w':'b';
          my $invitecode = int rand(2<<30);
          my $invite = {game_id => $game_id, color => $other_color};
-         my $timeout = 10000;
-         $self->getset_redis->setex("invite:$invitecode", $timeout
-            => $json->encode($invite));
+         #my $timeout = 10000;
+         $self->getset_redis->hset(invite => $invitecode => $json->encode($invite));
          $self->stash(invite_code => $invitecode);
       }
    }
