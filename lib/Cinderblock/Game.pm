@@ -295,7 +295,7 @@ sub attempt_pass{
    my $color = $msg->{pass_attempt}{color};
    return unless $color eq $turn;
    my $roles = $self->players_in_game($game_id);
-   my $turn_ident = $self->model->game_role_ident($game_id, 'b') // {};
+   my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
    return unless (defined $turn_ident);
    return unless ($turn_ident->{id} == $self->ident->{id});
    # success!
@@ -307,7 +307,6 @@ sub attempt_pass{
       time_ms => cur_time_ms(),
    };
    $game->push_event($event);
-   #$self->model->pub_redis->publish("game_events:$game_id" => $json->encode($event));
    if($game->is_doubly_passed){
       #   $game->set_status_scoring;
    }
@@ -317,29 +316,30 @@ sub attempt_pass{
 sub attempt_resign{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->hget (game => $game_id => sub{
-      my ($redis,$game) = @_;
-      $game = $json->decode($game);
-      my $status = $game->{status} // 'active';
-      return unless $status eq 'active';
-      my $color = $msg->{resign_attempt}{color};
-      my $roles = $self->players_in_game($game_id);
-      return unless ($roles->{$color} == $self->ident->{id});
-      $game->{turn} = '';
-      $game->{status} = 'finished';
-      $game->{winner} = ($color eq 'b') ? 'w' : 'b';
-      my $event = {
-         type => 'resign', 
-         color => $color,
-         turn_after => '', 
-         time_ms => cur_time_ms(),
-         winner => $game->{winner},
-      };
-      push @{$game->{game_events}}, $event;
-      $redis->hset(game => $game_id, $json->encode($game));
-      $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($event));
-   });
+   my $game = $self->model->game($game_id);
+   return unless $game->status =~ /scoring|active/;
+   # my $turn = $game->turn;
+   my $color = $msg->{resign_attempt}{color};
+   # return unless $color eq $turn;
+   my $roles = $self->players_in_game($game_id);
+   my $relevant_ident = $self->model->game_role_ident($game_id, $color) // {};
+   return unless (defined $relevant_ident);
+   return unless ($relevant_ident->{id} == $self->ident->{id});
+   # success!
+   $game->turn('none');
+   $game->status('finished');
+   $game->winner(($color eq 'b') ? 'w' : 'b');
+   my $event = {
+      type => 'resign', 
+      color => $color,
+      turn_after => 'none', 
+      time_ms => cur_time_ms(),
+      winner => $game->winner,
+   };
+   $game->push_event($event);
+   $game->update();
 }
+
 sub attempt_toggle_stone_state{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');

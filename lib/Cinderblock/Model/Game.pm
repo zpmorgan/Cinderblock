@@ -32,10 +32,15 @@ sub from_id{
 sub update{
    my $self = shift;
    my $id = $self->data->{id};
-   die "turn ". $self->data->{turn} unless ($self->data->{turn} =~ /^[wb]$/);
+   # don't let invalid turns go through. it's 'w','b', or 'none'
+   die "turn ". $self->data->{turn} unless ($self->data->{turn} =~ /^(none|[wb])$/);
    $self->model->redis_block(HSET => game => $id => $json->encode($self->data));
 }
 
+sub winner{
+   $_[0]->data->{winner} = $_[1] if $_[1];
+   return $_[0]->data->{winner}
+}
 sub turn{
    $_[0]->data->{turn} = $_[1] if $_[1];
    return $_[0]->data->{turn}
