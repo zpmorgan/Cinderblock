@@ -6,6 +6,8 @@ use Mojo::Redis;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
+use Time::HiRes;
+
 has data => (
    is => 'rw',
    isa => 'HashRef',
@@ -37,6 +39,20 @@ sub update{
    $self->model->redis_block(HSET => game => $id => $json->encode($self->data));
 }
 
+#captures, board, & turn describe only the current state. not history.
+sub add_captures{
+   my ($self, $color,$n) = @_;
+   $self->data->{captures}{$color} = 
+      $n + ( $self->data->{captures}{$color} // 0) ;
+}
+sub captures{
+   my ($self, $color) = @_;
+   return ( $self->data->{captures}{$color} // 0) ;
+}
+sub board {
+   $_[0]->data->{board} = $_[1] if $_[1];
+   return $_[0]->data->{board}
+}
 sub winner{
    $_[0]->data->{winner} = $_[1] if $_[1];
    return $_[0]->data->{winner}
@@ -59,12 +75,19 @@ sub status{
 sub set_status_active{shift->status('active')}
 sub set_status_scoring{shift->status('scoring')}
 sub set_status_finished{shift->status('finished')}
+sub w{shift->data->{w}}
+sub h{shift->data->{h}}
 
+sub game_events_ref {
+   return $_[0]->data->{game_events}
+}
 sub push_event{
    my ($self,$event) = @_;
    push @{$self->data->{game_events}}, $event;
    my $id = $self->id;
    $self->model->pub_redis->publish("game_events:$id" => $json->encode($event));
+   # for activity page.
+   $self->promote_activity();
 }
 
 sub is_doubly_passed{
@@ -74,6 +97,11 @@ sub is_doubly_passed{
       return 0 if $self->data->{game_events}->[$_]->{type} ne 'pass';
    }
    return 1
+}
+
+sub promote_activity{
+   my ($self) = @_;
+   $self->model->getset_redis->zadd(recently_actives_game_ids => Time::HiRes::time(), $self->id);
 }
 
 1;

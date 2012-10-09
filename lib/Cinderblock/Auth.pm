@@ -4,22 +4,6 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-sub FOO_sessid{
-   my $self = shift;
-   my $sessid = $self->session('session_id');
-   unless ($sessid){
-      # new_session
-      $sessid = $self->redis_block(incr => 'next_session_id');
-      $self->session(session_id => $sessid);
-   }
-   return $sessid;
-}
-
-sub FOO_auth{
-   my $self = shift;
-   $self->render(template => 'auth/new_authsies');
-}
-
 
 use Cache::File;
 use LWPx::ParanoidAgent;
@@ -28,9 +12,6 @@ use Readonly;
 use URI::Escape;
 
 
-Readonly my $FOO_CONSUMER_SECRET => <<'EOQ';
-Scissors cuts paper, paper covers rock, rock crushes lizard, lizard poisons Spock, Spock smashes scissors, scissors decapitates lizard, lizard eats paper, paper disproves Spock, Spock vaporizes rock, and as it always has, rock crushes scissors.
-EOQ
 Readonly my $CONSUMER_SECRET => <<'EOQ';
 FOO rock cruxhes liwzard, lizardo Spoisons pock, FOO
 EOQ

@@ -214,77 +214,78 @@ use Digest::MD5 qw(md5_base64);
 
 # request made through websocket.
 sub attempt_move{
-   my ($self, $msg_data) = @_;
+   my ($self, $msg) = @_;
    my $game_id = $self->stash('game_id');
-   $self->getset_redis->hget (game => $game_id => sub{
-         my ($redis,$game) = @_;
-         my $move_attempt = $msg_data->{move_attempt};
-         my $stone = $move_attempt->{stone};
-         my $roles = $self->players_in_game($game_id);
-         my $relevent_ident_id = $roles->{$stone};
-         # this session has this color?
-         return unless (defined $relevent_ident_id);
-         return unless ($relevent_ident_id == $self->ident->{id});
-         # this color can move?
-         $game = $json->decode($game);
-         my $turn = $game->{turn};
-         unless ($stone eq $turn) {return}
+   my $game = $self->model->game($game_id);
+   #can move?
+   my $move_attempt = $msg->{move_attempt};
+   return unless $game->status eq 'active';
+   my $turn = $game->turn;
+   my $color = $move_attempt->{color};
+   return unless $color eq $turn;
+   my $roles = $self->players_in_game($game_id);
+   my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
+   return unless (defined $turn_ident);
+   return unless ($turn_ident->{id} == $self->ident->{id});
+   # Can Move!
+   # valid move?
+   my %eval_result; #newboard, move_hash, delta,...
+   {
+      my $row = $move_attempt->{node}[0];
+      my $col = $move_attempt->{node}[1];
+      my $w = $game->w;
+      my $h = $game->h;
+      my $node = [$row,$col];
 
-         my $row = $move_attempt->{node}[0];
-         my $col = $move_attempt->{node}[1];
-         my ($w,$h) = @$game{qw/w h/};
-         my $node = [$row,$col];
-         my $rulemap = basilisk::Rulemap::Rect->new(
-            h => $h, w => $w,
-            wrap_v => $game->{wrap_v},
-            wrap_h => $game->{wrap_h},
-         );
-         my $board = $game->{board};
-         my ($newboard,$fail,$caps) =
-            $rulemap->evaluate_move($board, $node, $stone);
-         # $caps is just a list of nodes.
-         if($fail){return}
-         # now normalize & hash the board, check for collisions, & later store hash in event..
-         my $normalized_state = $stone .':'. $rulemap->normalize_board_to_string($newboard);
-         my $move_hash = md5_base64($normalized_state);
-         my $ko_collision =   
-            grep {$_->{move_hash} && ($_->{move_hash} eq $move_hash)} 
-               @{$game->{game_events}};
-         if($ko_collision){return}
+      my $rulemap = basilisk::Rulemap::Rect->new(
+         h => $h, w => $w,
+         wrap_v => $game->{wrap_v},
+         wrap_h => $game->{wrap_h},
+      );
+      my $board = $game->board;
+      my ($newboard,$fail,$caps) =
+      $rulemap->evaluate_move($board, $node, $color);
+      # $caps is just a list of nodes.
+      if($fail){return}
+      # now normalize & hash the board, check for collisions, & later store hash in event..
+      my $normalized_state = $color .':'. $rulemap->normalize_board_to_string($newboard);
+      my $move_hash = md5_base64($normalized_state);
+      my $ko_collision =   
+         grep {$_->{move_hash} && ($_->{move_hash} eq $move_hash)} 
+         @{$game->game_events_ref};
+      if($ko_collision){return}
 
-         my $delta = $rulemap->delta($board, $newboard);
-         $game->{board} = $newboard;
-         $game->{turn} = ($stone eq 'w') ? 'b' : 'w';
+      #my $delta = $rulemap->delta($board, $newboard);
+      #$game->{board} = $newboard;
+      #$game->{turn} = ($stone eq 'w') ? 'b' : 'w';
+      %eval_result = (
+         newboard => $newboard,
+         #turn => ($stone eq 'w') ? 'b' : 'w',
+         delta => $rulemap->delta($board, $newboard),
+         caps => scalar @$caps,
+      );
+   }
+   #if (scalar @$caps){
+   #   $game_event->{captures}{$stone} = scalar @$caps;
+   #}
 
-         my $game_event = {
-            move_hash => $move_hash,
-            type => 'move',
-            color => $stone,
-            time_ms => cur_time_ms(),
-            turn_after => $game->{turn},
-            node => [$row,$col],
-            delta => $delta,
-         };
-         if (scalar @$caps){
-            $game_event->{captures}{$stone} = scalar @$caps;
-         }
-         push @{$game->{game_events}}, $game_event;
-         if (@{$game->{game_events}} > 3){ # active enough.
-            $self->promote_game_activity($game_id);
-         }
-
-         $redis->hset(game => $game_id, $json->encode($game));
-         $self->publish_game_event($game_event);
-      });
-}
-sub promote_game_activity{
-   my ($self, $game_id) = @_;
-   $self->getset_redis->zadd(recently_actives_game_ids => cur_time_ms(), $game_id);
-}
-
-sub publish_game_event{
-   my ($self,$e) = @_;
-   $self->pub_redis->publish('game_events:'.$self->stash('game_id') => $json->encode($e));
+   # Valid Move!
+   $game->board ($eval_result{newboard});
+   $game->add_captures ($color, $eval_result{caps});
+   $game->turn ($game->next_turn);
+   my $event = {
+      type => 'move', 
+      color => $color,
+      turn_after => $game->turn,
+      time_ms => cur_time_ms(),
+      captures => {$color => $eval_result{caps}},
+      delta => $eval_result{delta},
+   };
+   $game->push_event($event);
+   if($game->is_doubly_passed){
+      #   $game->set_status_scoring;
+   }
+   $game->update();
 }
 sub attempt_pass{
    my ($self,$msg) = @_;

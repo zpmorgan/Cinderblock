@@ -191,7 +191,7 @@ Class('CinderblockGame', {
             action: 'attempt_move',
             move_attempt: {
                "node" : node,
-               "stone": this.actual_turn,
+               "color": this.actual_turn,
             }
          };
          this.sock.send(JSON.stringify(attempt));
