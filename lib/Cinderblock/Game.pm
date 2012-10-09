@@ -261,6 +261,7 @@ sub attempt_move{
       %eval_result = (
          newboard => $newboard,
          #turn => ($stone eq 'w') ? 'b' : 'w',
+         move_hash => $move_hash,
          delta => $rulemap->delta($board, $newboard),
          caps => scalar @$caps,
       );
@@ -280,6 +281,7 @@ sub attempt_move{
       time_ms => cur_time_ms(),
       captures => {$color => $eval_result{caps}},
       delta => $eval_result{delta},
+      move_hash => $eval_result{move_hash},
    };
    $game->push_event($event);
    if($game->is_doubly_passed){
