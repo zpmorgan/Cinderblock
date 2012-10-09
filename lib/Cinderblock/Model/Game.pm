@@ -103,7 +103,7 @@ sub is_doubly_passed{
 
 sub promote_activity{
    my ($self) = @_;
-   $self->model->getset_redis->zadd(recently_actives_game_ids => Time::HiRes::time(), $self->id);
+   $self->model->getset_redis->zadd(recently_actives_game_ids => 1000*Time::HiRes::time(), $self->id);
 }
 
 1;
