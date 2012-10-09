@@ -39,6 +39,12 @@ sub update{
    $self->model->redis_block(HSET => game => $id => $json->encode($self->data));
 }
 
+sub roles{
+   my $self = shift;
+   my $roles = $self->model->redis_block('HGET',game_roles => $self->id) // '{}';
+   return $json->decode($roles);
+}
+
 #captures, board, & turn describe only the current state. not history.
 sub add_captures{
    my ($self, $color,$n) = @_;

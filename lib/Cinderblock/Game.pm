@@ -211,7 +211,8 @@ sub attempt_move{
    my $turn = $game->turn;
    my $color = $move_attempt->{color};
    return unless $color eq $turn;
-   my $roles = $self->players_in_game($game_id);
+   #my $roles = $self->players_in_game($game_id);
+   my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
    return unless (defined $turn_ident);
    return unless ($turn_ident->{id} == $self->ident->{id});
@@ -282,7 +283,8 @@ sub attempt_pass{
    my $turn = $game->turn;
    my $color = $msg->{pass_attempt}{color};
    return unless $color eq $turn;
-   my $roles = $self->players_in_game($game_id);
+   #my $roles = $self->players_in_game($game_id);
+   my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
    return unless (defined $turn_ident);
    return unless ($turn_ident->{id} == $self->ident->{id});
@@ -309,7 +311,8 @@ sub attempt_resign{
    # my $turn = $game->turn;
    my $color = $msg->{resign_attempt}{color};
    # return unless $color eq $turn;
-   my $roles = $self->players_in_game($game_id);
+   my $roles = $game->roles;
+   #my $roles = $self->players_in_game($game_id);
    my $relevant_ident = $self->model->game_role_ident($game_id, $color) // {};
    return unless (defined $relevant_ident);
    return unless ($relevant_ident->{id} == $self->ident->{id});
