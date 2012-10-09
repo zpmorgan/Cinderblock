@@ -77,6 +77,8 @@ sub set_status_scoring{shift->status('scoring')}
 sub set_status_finished{shift->status('finished')}
 sub w{shift->data->{w}}
 sub h{shift->data->{h}}
+sub wrap_h{shift->data->{wrap_h}}
+sub wrap_v{shift->data->{wrap_v}}
 
 sub game_events_ref {
    return $_[0]->data->{game_events}

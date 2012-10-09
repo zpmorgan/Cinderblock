@@ -164,15 +164,11 @@ sub game_event_socket{
          return if $event->[0] eq 'subscribe';
          $ws->send($event->[2]);
       });
-   $self->getset_redis->hget(game => $game_id => sub{
-         my ($redis,$res) = @_;
-         my $game = $json->decode($res);
-         my $all_game_events = $game->{game_events};
-         for my $e(@$all_game_events){
-            #my $event = {event_type => 'move', move=>$mv};
-            $ws->send($json->encode($e));
-         }
-      });
+   my $game = $self->model->game($game_id);
+   my $all_game_events = $game->game_events_ref;
+   for my $e(@$all_game_events){
+      $ws->send($json->encode($e));
+   }
    
    $self->on(message => sub {
          my ($ws, $msg) = @_;
@@ -231,8 +227,8 @@ sub attempt_move{
 
       my $rulemap = basilisk::Rulemap::Rect->new(
          h => $h, w => $w,
-         wrap_v => $game->{wrap_v},
-         wrap_h => $game->{wrap_h},
+         wrap_v => $game->wrap_v,
+         wrap_h => $game->wrap_h,
       );
       my $board = $game->board;
       my ($newboard,$fail,$caps) =
@@ -247,9 +243,6 @@ sub attempt_move{
          @{$game->game_events_ref};
       if($ko_collision){return}
 
-      #my $delta = $rulemap->delta($board, $newboard);
-      #$game->{board} = $newboard;
-      #$game->{turn} = ($stone eq 'w') ? 'b' : 'w';
       %eval_result = (
          newboard => $newboard,
          #turn => ($stone eq 'w') ? 'b' : 'w',
@@ -338,23 +331,11 @@ sub attempt_resign{
 sub attempt_toggle_stone_state{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
-   my $game = $self->model->redis_block(hget => game => $game_id);
-   $game = $json->decode($game);
+   my $game = $self->model->game($game_id);
+   return unless $game->status eq 'scoring';
 
-   my $status = $game->{status} // 'active';
-   return unless $game->{status} eq 'scoring';
 }
          
-# after pass,pass
-sub launch_score_mode{
-   die;
-   my $self = shift;
-   my $game = $self->model->game('id');
-   $game->adjust_state(status => 'scoring');
-   $game->update();
-}
-
-
 # Websocket.
 sub happychat{
    my $self = shift;
