@@ -13,6 +13,67 @@ has data => (
    isa => 'HashRef',
 );
 
+has _fresh => (
+   isa => 'Bool',
+   is => 'ro',
+   default => 0,
+);
+has _fresh_role_idents => (
+   isa => 'HashRef',
+   is => 'ro',
+);
+
+around BUILDARGS => sub {
+   my $orig  = shift;
+   my $class = shift;
+   my %args = @_;
+
+   if ($args{data}){ #data from redis db or something?
+      return $class->$orig(@_);
+   }
+
+   my %fresh_role_idents = %{$args{roles}} ;
+   #$fresh_role_idents{b} = $args{b_role} if $args{b_role};
+   #$fresh_role_idents{w} = $args{w_role} if $args{w_role};
+
+   my $game_id = __PACKAGE__->model->redis_block(incr => 'next_game_id');
+   my ($h,$w,$wrap_h,$wrap_v) = @args{qw/h w wrap_h wrap_v/};
+   my $board = [ map{[map {''} 1..$w]} 1..$h ];
+   # TODO: handi
+   my $data = {
+      id => $game_id,
+      game_events => [],
+      board => $board,
+      w => $w,
+      h => $h,
+      wrap_v => $wrap_v,
+      wrap_h => $wrap_h,
+      turn => 'b',
+   };
+   my $self = $class->$orig( 
+      data => $data,
+      _fresh => 1,
+      _fresh_role_idents => \%fresh_role_idents,
+   );
+   return $self;
+};
+
+sub BUILD{
+   my $self = shift;
+   if ($self->_fresh){ #just now created? handle roles, store, etc.
+      $self->update();
+      for my $role_color (keys %{$self->_fresh_role_idents}){
+         warn $role_color;
+         warn $self->_fresh_role_idents->{$role_color};
+         $self->model->set_game_player(
+            game_id => $self->id, 
+            color => $role_color, 
+            ident_id => $self->_fresh_role_idents->{$role_color},
+         );
+      }
+   }
+}
+
 sub model{
    return Cinderblock::Model->instance;
 }

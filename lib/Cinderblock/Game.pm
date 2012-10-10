@@ -43,29 +43,20 @@ sub new_game{
    my $wrap_v = $self->param('wrap_v') ? 1 : 0;
    my $wrap_h = $self->param('wrap_h') ? 1 : 0;
 
-   my $game_id = $self->redis_block(incr => 'next_game_id');
-   #my $sessid = $self->sessid;
-   my $board = [ map{[map {''} 1..$w]} 1..$h ];
-   my $newgame = {
-      game_events => [],
-      board => $board,
-      w => $w,
-      h => $h,
-      wrap_v => $wrap_v,
-      wrap_h => $wrap_h,
-      turn => 'b',
-   };
-   $self->getset_redis->hset(game => $game_id => $json->encode($newgame));
-   # assign player role to $self->session
-   my $color = (rand>.5) ? 'b' : 'w';
-   $self->model->set_game_player(game_id => $game_id, color => $color, sessid => $self->sessid);
+   my %roles; #initial roles. color => ident_id
+   my $color = (rand > .5) ? 'w' : 'b';
+   $roles{$color} = $self->ident->{id};
    if($self->param('play_against') eq 'self'){
       my $other_color = ($color eq 'b' ? 'w' : 'b');
-      $self->model->set_game_player(game_id => $game_id, color => $other_color, sessid => $self->sessid);
+      $roles{$other_color} = $self->ident->{id};
    }
-   
-   $self->redirect_to("/game/$game_id");
-   $self->render(text => 'phoo');
+   my $game = Cinderblock::Model::Game->new(
+      h => $h, w => $w,
+      wrap_v => $wrap_v, wrap_h => $wrap_h,
+      roles => \%roles,
+   );
+   $self->redirect_to("/game/" . $game->id);
+   return $self->render(text => 'phoo');
 }
 
 sub be_invited{
