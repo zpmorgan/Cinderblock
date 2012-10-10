@@ -107,7 +107,19 @@ sub game{
    return $game;
 }
 
+# invite: {game_id => $game_id, color => $other_color};
+sub invite{
+   my ($self,$code) = @_;
+   my $invite = $self->redis_block(HGET => invite => $code);
+   $invite = $json->decode($invite);
+   return $invite;
+}
 
+sub recently_active_games{
+   my ($self,$n) = @_;
+   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', 0,$n-1);
+   return @$actives;
+}
 
 # get role...
 sub game_role_ident{ # ($game_id, 'w'

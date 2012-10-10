@@ -21,15 +21,14 @@ sub new_game_form{
 }
 sub welcome{
    my $self = shift;
-   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', 0,0);
-   $self->stash(last_active_game => $actives->[0]);
+   my @actives = $self->model->recently_active_games(1);
+   $self->stash(last_active_game => $actives[0]);
    $self->render(template => 'game/welcome');
 }
 sub activity{ # show recently active games.
    my $self = shift;
-   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', -50,-1);
-   $self->getset_redis(ZREMRANGE => 'recently_actives_game_ids', 0,-50);
-   $self->stash(recently_active_games => $actives);
+   my @actives = $self->model->recently_active_games(50);
+   $self->stash(recently_active_games => \@actives);
    $self->render(template => 'game/activity');
 }
 
@@ -72,9 +71,7 @@ sub new_game{
 sub be_invited{
    my $self = shift;
    my $code = $self->stash('invite_code');
-   my $invite = $self->model->redis_block(HGET => invite => $code);
-   $invite = $json->decode($invite);
-   # invite: {game_id => $game_id, color => $other_color};
+   my $invite = $self->model->invite($code);
 
    my $game_id = $invite->{game_id};
    my $color = $invite->{color};
