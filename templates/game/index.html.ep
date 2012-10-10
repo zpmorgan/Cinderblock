@@ -25,10 +25,10 @@
    var PORTAL_DATA = {
       game_id: <%=stash('game_id')%>,
       ws_url: "<%= $ws_url %>",
-      game_w: <%=$game->{w}%>,
-      game_h: <%=$game->{h}%>,
-      game_wrap_v: <%=$game->{wrap_v} ? 1 : 0%>,
-      game_wrap_h: <%=$game->{wrap_h} ? 1 : 0%>,
+      game_w: <%=$game->w%>,
+      game_h: <%=$game->h%>,
+      game_wrap_v: <%=$game->wrap_v ? 1 : 0%>,
+      game_wrap_h: <%=$game->wrap_h ? 1 : 0%>,
       % if (stash('my_role') eq 'player') {
          role:  'player',
          colors: [ <%== join ',', map {"'" . $_ . "'"} @{stash('my_colors')} %> ],
@@ -172,7 +172,7 @@
             <div class="tcontrol" id="fforwb"> </div>
          </div>
       </div>
-      % if ($game->{wrap_h} or $game->{wrap_v}){
+      % if ($game->wrap_h or $game->wrap_v){
          <div id="hint" class='left-panel-controls'>
             Scroll the board with WASD or by dragging with the right mouse button.
          </div>

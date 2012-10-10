@@ -69,13 +69,6 @@ sub new_game{
    $self->render(text => 'phoo');
 }
 
-sub players_in_game{
-   my $self = shift;
-   my $game_id = shift;
-   my $roles = $self->redis_block('HGET',game_roles => $game_id) // '{}';
-   return $json->decode($roles);
-}
-
 sub be_invited{
    my $self = shift;
    my $code = $self->stash('invite_code');
@@ -100,12 +93,9 @@ sub be_invited{
 sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
-   my $roles = $self->players_in_game($game_id);
-#   die $roles unless ref($roles) eq 'HASH';
-   my %roles = %$roles;
+   my $game = $self->model->game($game_id);
+   my %roles = %{$game->roles};
    my $sessid = $self->sessid;
-   my $game_json = $self->redis_block(HGET => game => $game_id);
-   my $game = $json->decode($game_json);
    $self->stash(game => $game);
 
    # what part does this session play? Watcher or player?
@@ -211,7 +201,6 @@ sub attempt_move{
    my $turn = $game->turn;
    my $color = $move_attempt->{color};
    return unless $color eq $turn;
-   #my $roles = $self->players_in_game($game_id);
    my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
    return unless (defined $turn_ident);
@@ -283,7 +272,6 @@ sub attempt_pass{
    my $turn = $game->turn;
    my $color = $msg->{pass_attempt}{color};
    return unless $color eq $turn;
-   #my $roles = $self->players_in_game($game_id);
    my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
    return unless (defined $turn_ident);
@@ -311,8 +299,7 @@ sub attempt_resign{
    # my $turn = $game->turn;
    my $color = $msg->{resign_attempt}{color};
    # return unless $color eq $turn;
-   my $roles = $game->roles;
-   #my $roles = $self->players_in_game($game_id);
+   #my $roles = $game->roles;
    my $relevant_ident = $self->model->game_role_ident($game_id, $color) // {};
    return unless (defined $relevant_ident);
    return unless ($relevant_ident->{id} == $self->ident->{id});
