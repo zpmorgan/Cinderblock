@@ -313,7 +313,12 @@ sub attempt_toggle_stone_state{
    my $game_id = $self->stash('game_id');
    my $game = $self->model->game($game_id);
    return unless $game->status eq 'scoring';
-
+   return unless $game->roles_of_ident_id ($self->ident->{id});
+   # success! we are participating..
+   my $toggle_attempt = $msg->{toggle_attempt};
+   my $col = $toggle_attempt->{col};
+   my $row = $toggle_attempt->{row};
+   my $node = [$row,$col];
 }
          
 # Websocket.

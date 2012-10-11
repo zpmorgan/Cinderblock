@@ -108,6 +108,16 @@ sub set_role{
    $self->model->redis_block(HSET => game_roles => $self->id => $json->encode($roles));
 }
 
+# this returns any colors where role{color} == ident_id
+# e.g. ('b','w') in a sandbox game
+sub roles_of_ident_id{
+   my ($self,$ident_id) = @_;
+   my $roles = $self->roles;
+   my @colors = grep{defined $_} map {$roles->{$_} // -1 == $ident_id} keys %$roles;
+   die join ',',@colors;
+   return @colors;
+}
+
 #captures, board, & turn describe only the current state. not history.
 sub add_captures{
    my ($self, $color,$n) = @_;
