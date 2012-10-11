@@ -63,8 +63,6 @@ sub BUILD{
    if ($self->_fresh){ #just now created? handle roles, store, etc.
       $self->update();
       for my $role_color (keys %{$self->_fresh_role_idents}){
-         warn $role_color;
-         warn $self->_fresh_role_idents->{$role_color};
          $self->set_role($role_color, $self->_fresh_role_idents->{$role_color});
       }
    }
@@ -81,7 +79,7 @@ sub from_id{
    my $id = shift;
    die unless $id;
    my $json_data = $model->redis_block(HGET => game => $id);
-   die unless $json_data;
+   return unless $json_data;
    my $data = $json->decode($json_data);
    $data->{id} = $id; #foo
    return __PACKAGE__->new(data => $data);

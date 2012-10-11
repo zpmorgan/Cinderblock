@@ -80,6 +80,10 @@ sub do_game{
    my $self = shift;
    my $game_id = $self->stash('game_id');
    my $game = $self->model->game($game_id);
+   unless($game){
+      $self->stash(msg => "game $game_id not found.");
+      return $self->render(template => 'game/welcome');
+   }
    my %roles = %{$game->roles};
    my $sessid = $self->sessid;
    $self->stash(game => $game);
