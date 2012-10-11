@@ -131,29 +131,6 @@ sub game_role_ident{ # ($game_id, 'w'
    my $ident = $self->redis_block(HGET => ident => $ident_id);
    return $json->decode($ident);
 }
-# set $role as an ident_id
-sub set_game_player{
-   my $self = shift;
-   my %opts = @_;
-   my $ident_id = $opts{ident_id};
-   unless($ident_id){
-      die 'no session to speak of.' unless $opts{sessid};
-      $ident_id = $self->redis_block(HGET => session_ident => $opts{sessid});
-      unless(defined $ident_id){
-         my $ident = $self->new_anon_ident(sessid => $opts{sessid});
-         $ident_id = $ident->{id};
-      }
-   }
-   #my $sessid = $opts{sessid} // $self->sessid;
-   my $gameid = $opts{game_id};# // $self->stash('game_id');
-   die unless $opts{color} =~ /^(b|w)$/;
-
-   my $roles = $self->redis_block(HGET => game_roles => $gameid);
-   $roles = $json->decode($roles);
-   $roles->{$opts{color}} = $ident_id;
-   $roles = $json->encode($roles);
-   $self->redis_block(HSET => game_roles => $gameid, $roles);
-}
 
 sub new_anon_ident{
    my $self = shift;

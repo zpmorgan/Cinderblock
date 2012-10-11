@@ -65,14 +65,12 @@ sub be_invited{
    my $invite = $self->model->invite($code);
 
    my $game_id = $invite->{game_id};
+   my $game = $self->model->game($game_id);
+
    my $color = $invite->{color};
    my $current_role_ident = $self->model->game_role_ident( $game_id, $color);
    unless ($current_role_ident){
-      $self->model->set_game_player(
-         game_id => $game_id,
-         color => $invite->{color},
-         ident_id => $self->ident->{id},
-      );
+      $game->set_role( $color, $self->ident->{id});
    }
    $self->redirect_to("/game/$game_id");
    $self->render(text => '');

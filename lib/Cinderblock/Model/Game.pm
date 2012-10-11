@@ -65,11 +65,7 @@ sub BUILD{
       for my $role_color (keys %{$self->_fresh_role_idents}){
          warn $role_color;
          warn $self->_fresh_role_idents->{$role_color};
-         $self->model->set_game_player(
-            game_id => $self->id, 
-            color => $role_color, 
-            ident_id => $self->_fresh_role_idents->{$role_color},
-         );
+         $self->set_role($role_color, $self->_fresh_role_idents->{$role_color});
       }
    }
 }
@@ -104,6 +100,14 @@ sub roles{
    my $self = shift;
    my $roles = $self->model->redis_block('HGET',game_roles => $self->id) // '{}';
    return $json->decode($roles);
+}
+sub set_role{
+   my $self = shift;
+   my $color = shift;
+   my $ident_id = shift;
+   my $roles = $self->roles;
+   $roles->{$color} = $ident_id;
+   $self->model->redis_block(HSET => game_roles => $self->id => $json->encode($roles));
 }
 
 #captures, board, & turn describe only the current state. not history.

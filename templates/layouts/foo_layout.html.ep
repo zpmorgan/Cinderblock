@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+% my $referrer = $self->req->headers->referrer || 'none';
+% $self->model->getset_redis->zincrby(zreferrers => 1,$referrer);
+%# ZREVRANGEBYSCORE zreferrers +Inf -Inf WITHSCORES
 <html>
    <head>
       <title><%= title %></title>
