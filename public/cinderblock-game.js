@@ -126,18 +126,33 @@ Class('CinderblockGame', {
       },
       handlePassEvent : function(pe){
          this.game_events.push(pe);
-         //this.getActual_board().applyDelta(move_event.delta);
          this.actual_turn = pe.turn_after;
          this.onNewGameEvent(pe); //cb
          this.onTotalGameEventsChange (this.game_events.length);
       },
       handleResignEvent : function(re){
          this.game_events.push(re);
-         //this.getActual_board().applyDelta(move_event.delta);
          this.actual_turn = re.turn_after;
          this.onNewGameEvent(re); //cb
          this.onTotalGameEventsChange (this.game_events.length);
          this.onGameEnd(re); //cb
+      },
+
+      handleStatusChange: function(sc){
+         // active|scoring|finished
+         if(sc.newStatus == 'active'){
+            this.setStatusScoring(); 
+            this.actual_turn = re.turn_after;
+         }
+         else if(sc.newStatus == 'scoring'){
+            this.setStatusScoring(); 
+            this.actual_turn = null;
+         }
+         else if(sc.newStatus == 'finished'){
+            this.setStatusScoring(); 
+            this.actual_turn = re.turn_after;
+            //this.onGameEnd(re); //cb
+         }
       },
    
       // funky callback things.
@@ -164,11 +179,14 @@ Class('CinderblockGame', {
             if(msg.type == 'move'){
                game.handleMoveEvent(msg);
             }
-            if(msg.type == 'pass'){
+            else if(msg.type == 'pass'){
                game.handlePassEvent(msg);
             }
-            if(msg.type == 'resign'){
+            else if(msg.type == 'resign'){
                game.handleResignEvent(msg);
+            }
+            else if (msg.type == 'status_change'){
+               game.handleStatusChange(msg);
             }
          };
          this.sock.onopen = function () {

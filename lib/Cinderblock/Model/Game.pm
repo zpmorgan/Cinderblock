@@ -12,6 +12,13 @@ has data => (
    is => 'rw',
    isa => 'HashRef',
 );
+has rulemap => (
+   is => 'rw',
+   isa => 'Basilisk::Rulemap',
+   lazy => 1,
+   builder => '_build_rulemap',
+);
+
 
 has _fresh => (
    isa => 'Bool',
@@ -66,6 +73,10 @@ sub BUILD{
          $self->set_role($role_color, $self->_fresh_role_idents->{$role_color});
       }
    }
+}
+
+sub _build_rulemap{
+   my $self = shift;
 }
 
 sub model{
@@ -178,6 +189,47 @@ sub is_doubly_passed{
       return 0 if $self->data->{game_events}->[$_]->{type} ne 'pass';
    }
    return 1
+}
+
+# each game in scoring mode has a 'scorable', which is a description
+# of the current state of scoring negotiations.
+# ->{approval} is hashref: color => (color approves)?; 
+# ->{dead_chains}, arrayref of chain descriptions
+sub atomic_score_op{
+   my ($self,$op) = @_;
+   my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve? exit_scoring?
+   my $scorable_key = "scorable:" . $self->id;
+   $self->redis_block(WATCH => $scorable_key);
+   my $scorable = $self->redis_block(GET => $scorable_key);
+   $scorable = $json->decode($scorable);
+
+   my $rulemap = $self->rulemap;
+   # ADJUST
+   if ($op->{type} eq 'mark_dead'){
+      delete $scorable->{approval};
+   }
+   elsif ($op->{type} eq 'mark_alive'){
+      delete $scorable->{approval};
+   }
+   elsif ($op->{type} eq 'approve'){
+      for my $color ($self->colors_of_ident($op->{ident})){
+         $scorable->{approval}->{$color} = 1;
+      }
+   }
+   elsif ($op->{type} eq 'exit_scoring'){}
+   # TRANSACT
+   $scorable = $json->encode($scorable);
+   my @foo = $self->redis_block(
+      ['MULTI'],
+      [SET => $scorable_key, $scorable],
+      ['EXEC'],
+   );
+   my $status_change_msg = {
+      type => 'status_change',
+   };
+   # PUB
+   $self->model->pub_redis->publish(
+      "game_happenings:".$self->id => $json->encode($status_change_msg));
 }
 
 sub promote_activity{

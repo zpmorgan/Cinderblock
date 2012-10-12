@@ -4,8 +4,8 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-use basilisk::Rulemap;
-use basilisk::Rulemap::Rect;
+use Basilisk::Rulemap;
+use Basilisk::Rulemap::Rect;
 
 # use Cinderblock::Model;
 
@@ -205,7 +205,7 @@ sub attempt_move{
       my $h = $game->h;
       my $node = [$row,$col];
 
-      my $rulemap = basilisk::Rulemap::Rect->new(
+      my $rulemap = Basilisk::Rulemap::Rect->new(
          h => $h, w => $w,
          wrap_v => $game->wrap_v,
          wrap_h => $game->wrap_h,
@@ -249,9 +249,6 @@ sub attempt_move{
       move_hash => $eval_result{move_hash},
    };
    $game->push_event($event);
-   if($game->is_doubly_passed){
-      #   $game->set_status_scoring;
-   }
    $game->update();
 }
 sub attempt_pass{
@@ -276,7 +273,7 @@ sub attempt_pass{
    };
    $game->push_event($event);
    if($game->is_doubly_passed){
-      #   $game->set_status_scoring;
+      $game->set_status_scoring;
    }
    $game->update();
    return;
@@ -308,17 +305,22 @@ sub attempt_resign{
    $game->update();
 }
 
-sub attempt_toggle_stone_state{
+# sub attempt_toggle_stone_state{
+sub scoring_operation{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
    my $game = $self->model->game($game_id);
    return unless $game->status eq 'scoring';
    return unless $game->roles_of_ident_id ($self->ident->{id});
    # success! we are participating..
-   my $toggle_attempt = $msg->{toggle_attempt};
-   my $col = $toggle_attempt->{col};
-   my $row = $toggle_attempt->{row};
-   my $node = [$row,$col];
+   my $op = $msg->{operation};
+   my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve?
+   my $node = $op->{node};
+   #somehow atomic & timestamped.
+   my $op_result = $game->atomic_score_op($op);
+   #if ($op_result){
+      # model publishes the operation results if any..
+   #}
 }
          
 # Websocket.
