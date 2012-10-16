@@ -14,7 +14,7 @@ has data => (
 );
 has rulemap => (
    is => 'rw',
-   isa => 'Basilisk::Rulemap',
+   isa => 'Games::Go::Cinderblock::Rulemap',
    lazy => 1,
    builder => '_build_rulemap',
 );
@@ -76,7 +76,7 @@ sub BUILD{
 }
 
 sub _build_rulemap{
-   my $self = shift;
+   my $self = shift;die @_;
 }
 
 sub model{
