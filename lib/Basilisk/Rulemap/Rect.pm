@@ -1,6 +1,7 @@
-package basilisk::Rulemap::Rect;
+package Basilisk::Rulemap::Rect;
+use 5.16.0;
 use Moose;
-extends 'basilisk::Rulemap';
+extends 'Basilisk::Rulemap';
 
 has h  => ( #height
    is => 'ro',
@@ -23,24 +24,41 @@ has wrap_h => (
    default => 0,
 );
 
+# LoL of all 0's
+sub empty_board{ 
+   my $self = shift;
+   my @rows = 
+      map {
+         [ map {0} (1..$self->w) ]
+      } (1..$self->h);
+   return \@rows;
+}
 
 sub copy_board{
    my ($self, $board) = @_;
    return [ map {[@$_]} @$board ];
 }
 
-#turns [13,3] into 13-3
+sub node_to_string{node_to_id(@_)}
+sub node_from_string{node_from_id(@_)}
+
+#turns [13,3] into 13*w+3
 #see also &pretty_coordinates
-sub node_to_string{ 
+sub node_to_id{ 
    my ($self, $node) = @_;
-   return join '-', @$node;
+   #return join '-', @$node;
+   return $node->[0] * $self->w + $node->[1]
 }
-sub node_from_string{ #return undef if invalid
+sub node_from_id{ #return undef if invalid
    my ($self, $string) = @_;
-   return unless $string =~ /^(\d+)-(\d+)$/;
-   return unless $1 < $self->h;
-   return unless $2 < $self->w;
-   return [$1,$2];
+   my $row = $string / $self->w;
+   my $col = $string % $self->w;
+   return [$row,$col];
+   #return unless $string =~ /^(\d+)-(\d+)$/;
+   #return unless $1 < $self->h;
+   #return unless $2 < $self->w;
+   #return $node->[0] * $self->w + $node->[1]
+   #return [$1,$2];
 }
 sub stone_at_node{ #0 if empty, b black, w white, r red, etc
    my ($self, $board, $node) = @_;
@@ -61,7 +79,8 @@ sub all_nodes{ #return list coordinates
    return @nodes;
 }
 
-sub node_liberties{
+sub node_liberties{goto \&adjacent_nodes}
+sub adjacent_nodes{
    my ($self, $node) = @_;
    my ($row, $col) = @$node;
    my @nodes;
@@ -95,5 +114,22 @@ sub pretty_coordinates{ #convert 1-1 to b18, etc
    $row = $self->h - $row;
    
    return "$col$row";
+}
+
+use Scalar::Util::Numeric qw(isint);
+
+sub node_is_valid{
+   my ($self, $node) = @_;
+   my ($row,$col) = @$node;
+   #check bounds
+   return 0 if 
+      $row < 0
+      or $col < 0
+      or $row >= ($self->h)
+      or $col >= ($self->w);
+   #check integeritude.. for row & col.
+   return 0 unless isint $row;
+   return 0 unless isint $col;
+   return 1;
 }
 1;

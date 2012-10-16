@@ -1,10 +1,14 @@
-package basilisk::Rulemap;
-
+package Basilisk::Rulemap;
+use 5.16.0;
 use Moose;
-#use MooseX::Method::Signatures;
 
-use basilisk::Rulemap::Rect;
-#use basilisk::Util;
+use Basilisk::NodeSet;
+use Basilisk::State;
+use Basilisk::Scorable;
+use Basilisk::MoveAttempt;
+use Basilisk::MoveResult;
+
+use Basilisk::Rulemap::Rect;
 use List::MoreUtils qw/all/;
 
 # This class evaluates moves and determines new board positions.
@@ -16,20 +20,26 @@ use List::MoreUtils qw/all/;
 # However this class will not handle rendering.
 
 # Rulemaps are not stored in the database. They are derived from
-#   entries in the Ruleset and Extra_rule tables.
+#   entries in the Ruleset and Extra_rule tables. Or wherever.
 # Some extra rules could be assigned using Moose's roles.
 # Example: 'fog of war', 'atom go' each could be assigned to several variants.
 
 # Also: This does not involve the ko rule. That requires a database search 
-#   for a duplicate position.
+#   for a duplicate position. TODO:: B::History. Do this.
 
 # Note: I'm treating intersections (i.e. nodes) as scalars, which different rulemap 
 #   subclasses may handle as they will. Rect nodes [$row,$col].
 
-
 #To support more than 2 players or sides, each game inherently has a sort of basis
 # such as 'ffa', 'zen', 'team', 'perverse', or perhaps more
 
+# Classes to extract:
+# Basilisk::State,
+# Basilisk::MoveResult,
+# Basilisk::Scorable,
+# Basilisk::Delta,
+# Basilisk::History?
+# Basilisk::NodeSet, (DONE)
 
 has topology => (
    is => 'ro',
@@ -53,20 +63,20 @@ has ko_rule => (
 );
 
 # to be extended to fog, atom, etc
-sub apply_rule_role{
+sub FOO_apply_rule_role{
    my ($self, $rule, $param) = @_;
    if ($rule =~ /^heisengo/){
-      basilisk::Rulemap::Heisengo::apply ($self, $param);
+      Basilisk::Rulemap::Heisengo::apply ($self, $param);
    }
    elsif ($rule =~ /^planckgo/){
-      basilisk::Rulemap::Planckgo::apply ($self, $param);
+      Basilisk::Rulemap::Planckgo::apply ($self, $param);
    }
    else {die $rule} 
 }
 
 
 #These must be implemented in a subclass
-my $blah = 'use a subclass instead of basilisk::Rulemap';
+my $blah = 'use a topo subclass such as ::Rect instead of Basilisk::Rulemap';
 sub move_is_valid{ die $blah}
 sub node_to_string{ die $blah}
 sub node_from_string{ die $blah}
@@ -75,6 +85,18 @@ sub set_stone_at_node{ die $blah}
 sub stone_at_node{ die $blah}
 sub all_nodes{ die $blah}
 sub copy_board{ die $blah}
+sub empty_board{ die $blah}
+
+
+sub initial_state{
+   my $self = shift;
+   my $state = Basilisk::State->new(
+      rulemap => $self,
+      board => $self->empty_board,
+      turn => 'b',
+   );
+   return $state;
+}
 
 sub normalize_board_to_string{ # to hash for ko collisions..
    my ($self,$board) = @_;
@@ -82,49 +104,74 @@ sub normalize_board_to_string{ # to hash for ko collisions..
    my @all_stones = map {$self->stone_at_node($board, $_) || 0} @all_nodes;
    return join '', @all_stones;
 }
+# use Carp::Always;
 
-sub evaluate_move{
-   my ($self, $board, $node, $side) = @_;
-   die "bad side $side" unless $side =~ /^[bwr]$/;
-   
+sub evaluate_move_attempt{
+   my ($self, $move_attempt) = @_;
+   my $basis = $move_attempt->basis_state;
+   my $board = $basis->board;
+   my $node = $move_attempt->node;
+   my $color = $move_attempt->color;
+   # my ($self, $board, $node, $color) = @_;
+   die "bad color $color" unless $color=~ /^[bw]$/;
+   die "bad node @$node" unless $self->node_is_valid($node);
+  
+   my %failure_template = (
+      rulemap => $self,
+      basis_state => $basis,
+      move_attempt => $move_attempt,
+      succeeded => 0, 
+   );
    if ($self->stone_at_node ($board, $node)){
-      return (undef,"stone exists at ". $self->node_to_string($node)); }
+      return Basilisk::MoveResult->new(
+         %failure_template,
+         reason => "stone exists at ". $self->node_to_string($node)
+      ); 
+   }
+   if ($color ne $basis->turn){
+      return Basilisk::MoveResult->new(
+         %failure_template,
+         reason => "color $color (not) played during turn " .$basis->turn,
+      ); 
+   }
    
    #produce copy of board for evaluation -> add stone at $node
    my $newboard = $self->copy_board ($board);
-   $self->set_stone_at_node ($newboard, $node, $side);
+   $self->set_stone_at_node ($newboard, $node, $color);
    # $chain is a list of strongly connected stones,
    # and $foes=enemies,$libs=liberties adjacent to $chain
    my ($chain, $libs, $foes) = $self->get_chain($newboard, $node);
    my $caps = $self->find_captured ($newboard, $foes);
    if (@$libs == 0 and @$caps == 0){
-      return (undef,'suicide');
+      return Basilisk::MoveResult->new(
+         rulemap => $self,
+         basis_state => $basis,
+         move_attempt => $move_attempt,
+         succeeded => 0, 
+         reason => "suicide",
+      ); 
    }
    for my $cap(@$caps){ # just erase captured stones
       $self->set_stone_at_node ($newboard, $cap, 0);
    }
-   return ($newboard, '', $caps);#no err
+   my $res_stt = Basilisk::State->new(
+      rulemap => $self,
+      board => $newboard,
+      turn => (($color eq 'b') ? 'w' : 'b'),
+   );
+   #return ($newboard, '', $caps);#no err
+   return Basilisk::MoveResult->new(
+      rulemap => $self,
+      basis_state => $basis,
+      move_attempt => $move_attempt,
+      succeeded => 1,
+      caps => $caps,
+      resulting_state => $res_stt,
+   ); 
    #node is returned to make this method easier to override for heisenGo
 }
 
-#this is perfectly clear.
-sub nodestrings_string_to_nodestrings_list{
-   my ($self, $nodes) = @_; #'4-4_3-5', to ('4_4','3_5')
-   my @nodestrings = split '_', $nodes;
-   return @nodestrings
-}
-sub nodestrings_to_list{
-   my ($self, $nodes) = @_; #'4-4_3-5', etc
-   my @nodestrings = split '_', $nodes;
-   return map {$self->node_from_string($_)} @nodestrings
-}
-sub nodestrings_from_list{
-   my ($self, $nodes) = @_; #[[3,3],[5,4]] 
-   my $nodestrings = join '_', map {$self->node_to_string($_)} @$nodes;
-   return $nodestrings  #'4-4_3-5', etc
-}
-
-#uses a floodfill algorithm
+#uses a floodfill algorithm, #TODO: absorb. generic.
 #returns (string, liberties, adjacent_foes)
 sub get_chain { #for all board types
    my ($self, $board, $node1) = @_; #start row/column
@@ -190,6 +237,33 @@ sub all_chains{
    return (\%delegates, \%delegate_of_stone, \%delegate_side)
 }
 
+sub nodeset{ # $rm->nodeset(@nodes)
+   my $self = shift;
+   my $ns = Basilisk::NodeSet->new(rulemap => $self);
+   $ns->add($_) for @_;
+   return $ns;
+}
+# sub all_nodes, sub no_nodes.. TODO
+sub all_nodes_nodeset{
+   my $self = shift;
+   return $self->nodeset($self->all_nodes);
+}
+sub floodfill{ #in state now..
+   my ($self, $cond, $progenitor) = @_;
+   my $set = $self->nodeset($progenitor);
+   my $seen = $self->nodeset($progenitor);
+   my @q = $self->adjacent_nodes($progenitor);
+   while(@q){
+      my $node = shift @q;
+      next if $seen->has($node);
+      $seen->add($node);
+      next unless $cond->($node);
+      $set->add($node);
+      push @q, $self->adjacent_nodes($node);
+   }
+}
+
+
 sub all_stones {
    my ($self, $board) = @_;
    return grep {$self->stone_at_node($board, $_)} ($self->all_nodes);
@@ -223,7 +297,7 @@ sub get_empty_space{
    return (\@found, \@adjacent_stones);
 }
 
-
+# TODO: absorb into generic flood fill
 #take a list of stones, returns those which have no libs, as chains
 sub find_captured{
    my ($self, $board, $nodes) = @_;
@@ -243,119 +317,8 @@ sub find_captured{
    return \@caps
 }
 
-# A death_mask is basically a set of stringified nodes with an entry 
-#   where there's a dead string. Only one stone per string need be marked.
-# This stuff is just for scoring. Maybe it could be used for 
-#   some interactive score estimation too.
 
-sub death_mask_from_list{ 
-   #Takes list of some dead stones. Other stones in same chains are also dead.
-   my ($self, $board, $list) = @_;
-   my %mask;
-   for my $node (@$list){
-      my ($deadchain, $libs, $foes) = $self->get_chain ($board, $node);
-      for my $deadnode (@$deadchain){
-         $mask {$self->node_to_string($deadnode)} = 1;
-      }
-   }
-   return \%mask;
-}
-sub death_mask_to_list{
-   #turns each dead string into a representative stringified node
-   my ($self, $board, $mask) = @_;
-   my @list;
-   my %seen;
-   for my $node ($self->all_nodes){
-      my $nodestring = $self->node_to_string($node);
-      if ($mask->{$nodestring}) { #marked dead
-         next if $seen {$nodestring};
-         my ($deadnodes, $libs, $foes) = $self->get_chain ($board, $node);
-         die 'blah?' unless @$deadnodes;
-         for my $deadnode (@$deadnodes){
-            $seen {$self->node_to_string($deadnode)} = 1;
-         }
-         push @list, $deadnodes->[0];
-      }
-   }
-   return @list;
-}
-sub mark_alive{
-   my ($self, $board, $mask, $node) = @_;
-   my ($alivenodes, $libs, $foes) = $self->get_chain ($board, $node);
-   for my $n (@$alivenodes){
-      delete $mask->{$self->node_to_string($n)};
-   }
-}
 
-#this returns (terr_mask, {side=>points})
-sub find_territory_mask{
-   my ($self, $board, $death_mask) = @_;
-   $death_mask ||= {};
-   my %seen; #accounts for all empty nodes.
-   my %terr_mask;
-   my %terr_points;# {b,w,r}
-   $terr_points{$_}=0 for $self->all_sides;
-   
-   for my $node ($self->all_nodes){
-      next if $seen{$self->node_to_string($node)};
-      my ($empties, $others) = $self->get_empty_space($board, $node, $death_mask);
-      next unless @$empties and @$others;
-      
-      my $terr_side = $self->stone_at_node ($board, $others->[0]);
-      my $is_terr = 1; #true, if this space is someone's territory
-      for my $stone (@$others){
-         next if $death_mask->{$self->node_to_string($stone)};
-         $is_terr = 0 unless $self->stone_at_node ($board, $stone) eq $terr_side;
-      }
-      for my $e (@$empties){
-         $seen{$self->node_to_string($e)} = 1;
-         if ($is_terr){
-            $terr_mask{$self->node_to_string($e)} = $terr_side;
-            $terr_points{$terr_side}++;
-         }
-      }
-   }
-   return (\%terr_mask, \%terr_points);
-}
-
-sub count_deads{
-   my ($self, $board, $death_mask) = @_;
-   my %deads; #{b,w,r}
-   for ($self->all_sides){
-      $deads{$_} = 0;
-   }
-   for my $deadnodestring (keys %$death_mask){
-      my $node = $self->node_from_string ($deadnodestring);
-      my $side = $self->stone_at_node ($board, $node);
-      $deads{$side}++;
-   }
-   return \%deads;
-}
-
-sub compare_masks{
-   my ($self, $mask1, $mask2) = @_;
-   return 0 unless (keys %$mask1 == keys %$mask2);
-   for my $n (keys %$mask1){
-      return 0 unless $mask2->{$n};
-   }
-   return 1;
-}
-
-sub captures_of_side {die'do'}
-sub captures_of_entity{
-   my ($self, $entity, $captures) = @_;
-   die 'wrong score mode' unless $self->detect_basis eq 'ffa';
-   unless (defined $captures) {$captures = $self->default_captures}
-   my @caps = split ' ', $captures;
-   for my $phase (split ' ', $self->phase_description) {
-      if ($phase =~ m/$entity/){
-         return shift @caps
-      }
-      else {
-         shift @caps
-      }
-   }
-}
 sub side_of_entity{
    my ($self, $entity) = @_;
    die 'wrong score mode' unless $self->detect_basis eq 'ffa';
@@ -378,7 +341,7 @@ sub all_sides{
    my $self = shift;
    my $pd = $self->phase_description;
    my %s;
-   while($pd=~/([bwr])/g){
+   while($pd=~/([bw])/g){
       $s{$1}=1
    }
    return keys %s;
@@ -474,25 +437,8 @@ sub determine_next_phase{
    die "I was given a bad list of choice phases: " . join',',@$choice_phases;
 }
 
-#compare initial board to a blank slate.
-#this delta fits nicely in position 0 for 
-# a delta list that covers the game.
-sub initial_delta{
-   my ($self, $initial_board) = @_;;
-   return {} unless $initial_board;
-   
-   my %delta;
-   for my $node ($self->all_nodes){
-      if (my $c = $self->stone_at_node($initial_board, $node)){
-         my $nstr = $self->node_to_string($node);
-         $delta{$nstr} = ['add', {stone => $c}];
-      }
-   }
-   return \%delta;
-}
 
-
-#compare initial earlier board to later board.
+#compare earlier board to later board.
 sub delta{
    my ($self, $board1, $board2) = @_;
    
@@ -510,11 +456,14 @@ sub delta{
             push @remove, [$fore => $node];
          }
          else{
-            die 'replacement? no thanks.';
-            #$delta{$n} = ['update', {stone => $fore}, {stone => $afte}];
+            # die 'replacement? no thanks.';
+            push @remove, [$fore => $node];
+            push @add, [$afte => $node];
          }
       }
    }
    return {remove => \@remove, add => \@add};
 }
+
+
 1;
