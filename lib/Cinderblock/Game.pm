@@ -283,10 +283,11 @@ sub attempt_pass{
       turn_after => $game->turn,
       time_ms => cur_time_ms(),
    };
-   $game->push_event($event);
    if($game->is_doubly_passed){
       $game->set_status_scoring;
+      $event->{status_after} = 'scoring';
    }
+   $game->push_event($event);
    $game->update();
    return;
 }
@@ -312,6 +313,7 @@ sub attempt_resign{
       turn_after => 'none', 
       time_ms => cur_time_ms(),
       winner => $game->winner,
+      status_after => 'finished',
    };
    $game->push_event($event);
    $game->update();
