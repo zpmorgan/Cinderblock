@@ -75,12 +75,26 @@ use Test::Mojo;
       is($res[$_]{type}, 'move', "move $_ near corner");
       is(ref $res[$_]{delta}, 'HASH', "delta in res is hash.");
    }
-   is_deeply($res[0]{delta}{remove}, [], 'delta; dirst move, no remove');
+   is_deeply($res[0]{delta}{board}{remove}, undef, 'delta; dirst move, no remove');
+}
+done_testing;
+__END__
    is_deeply($res[0]{delta}{add}, [[b=>[0,1]]], 'delta 1, add one');
    is_deeply($res[1]{delta}{remove}, [], 'delta; move 2, no remove');
    is_deeply($res[1]{delta}{add}, [[w=>[0,0]]], 'delta 2, add one');
    is_deeply($res[2]{delta}{remove}, [[w=>[0,0]]], 'delta; move 3, remove a w');
    is_deeply($res[2]{delta}{add}, [[b=>[1,0]]], 'delta 3, add one b');
+
+   #delta is to have turn & capture changes.
+   is_deeply($res[0]{delta}{turn}, {before => 'b', after => 'w'}, 'delta has turn.');
+   is_deeply($res[1]{delta}{turn}, {before => 'w', after => 'b'}, 'delta has turn.');
+   is_deeply($res[2]{delta}{turn}, {before => 'b', after => 'w'}, 'delta has turn.');
+   is($res[0]{delta}{captures}, undef, 'delta capturs isn\'t defined if no captures.');
+   is($res[1]{delta}{captures}, undef, 'delta capturs isn\'t defined if no captures.');
+   is_deeply($res[0]{delta}{captures}, {
+         before => {b=>0,w=>0}, 
+         after => {b=>1,w=>0}
+      }, 'capturing event delta has captures.');
 
    use Data::Dumper;
 #   die Dumper $res[2];
