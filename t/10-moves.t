@@ -38,7 +38,10 @@ ok($ws_url, 'content contains a websocket url.');
 
 my $ws_t = $t->websocket_ok($ws_url, "open a websocket on $ws_url");
 $ws_t->status_is(101);
-$ws_t->message_is(101);
+my $msg = $ws_t->_message;
+is_deeply(Mojo::JSON->decode($msg), {event_type => 'hello',hello=>'hello'},
+   'event is a hello.');
+#$ws_t->message_is(101);
 
 done_testing;
 

@@ -174,6 +174,8 @@ sub game_event_socket{
          my $ws = shift;
          say 'WebSocket closed.';
       });
+   my $event = {event_type => 'hello', hello=>'hello'};
+   $ws->send($json->encode($event));
    Mojo::IOLoop->recurring(10 => sub{
          my $event = {event_type => 'hello', hello=>'hello'};
          $ws->send($json->encode($event));
