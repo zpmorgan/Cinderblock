@@ -125,7 +125,8 @@ sub game_event_socket{
    $sub_redis->subscribe('game_events:'.$game_id => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
-            $self->stash(sub_redis => $sub_redis);
+            $self->stash(game_sub_redis => $sub_redis);
+            $redis->on(close => sub{say 'game_alfjd closing'});
             return;
          }
          $ws->send($event->[2]);
@@ -369,6 +370,7 @@ sub happychat{
    $sub_redis->subscribe($hc_channel_name => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
+            $redis->on(close => sub{say 'happy snghub_regdgis closing'});
             $self->stash(sub_redis => $redis);
             return;
          };
@@ -411,61 +413,5 @@ sub happychat{
    });
 }
 
-# Websocket.
-sub sadchat{
-   my $self = shift;
-   my $ws = $self->tx;
-   my $sub_redis = $self->model->sub_redis;
-   #$self->stash(sub_redis => $sub_redis);
-
-   $self->getset_redis->lrange('sadchat_messages', 0, 100, sub{
-         my ($redis, $res) = @_;
-         for my $m (reverse @$res){
-            $self->pub_redis->publish('sadchat', $m);
-         }
-      });
-   # push sad msg events when they come down the tube.
-   $sub_redis->subscribe('sadchat' => sub{
-         my ($redis, $event) = @_;
-         if ($event->[0] eq 'subscribe'){
-            $self->stash(sub_redis => $redis);
-            return;
-         }
-         $ws->send($event->[2]);
-      });
-   $self->on(message => sub {
-         my ($ws, $msg) = @_;
-         my $msg_data = $json->decode($msg);
-         if($msg_data->{type} eq 'ping'){
-            $ws->send($json->encode({type=>'pong'}));
-            return;
-         }
-         if($msg_data->{type} eq 'pong'){
-            return;
-         }
-
-         # not ping, not pong. so text...
-         my $text = $msg_data->{text};
-         warn $text;
-         return if length($text) > 400 or $text eq '';
-         my $time_ms = cur_time_ms();
-         my $speaker = $self->ident->{username};
-
-         say "Message?: $msg";
-         # push to a redis queue which stores last 100 msgs.
-         # most recent first..
-         my $sad_msg_out = {
-            type => 'sad_msg',
-            text => $text,
-            time_ms => cur_time_ms(),
-            speaker => $speaker,
-         };
-         $sad_msg_out = $json->encode($sad_msg_out);
-         $self->getset_redis->lpush(sadchat_messages => $sad_msg_out);
-         $self->getset_redis->ltrim(sadchat_messages => 0,99);
-         $self->getset_redis->lpush(sadchat_messages_all => $sad_msg_out);#archive?
-         $self->pub_redis->publish('sadchat', $sad_msg_out);
-      });
-}
 
 1;
