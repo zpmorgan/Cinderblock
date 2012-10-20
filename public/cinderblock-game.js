@@ -60,19 +60,24 @@ Class( 'GridBoard', {
       clearNode : function(node){
          this.getData()[node[0]][node[1]] = '';
       },
-      applyDelta : function(delta){
+      applyBoardDelta : function(boardDelta){
          var board = this;
-         var removes = delta.remove;
-         var adds = delta.add;
-         $.each(removes, function(){
-            var node = this[1];
-            board.clearNode(node);
-         });
-         $.each(adds, function(){
-            var node = this[1];
-            var stone = this[0];
-            board.setNode(node, stone);
-         });
+         if(boardDelta.add != null){
+            $.each(boardDelta.add, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  board.setNode(node, color);
+               });
+            });
+         }
+         if(boardDelta.remove != null){
+            $.each(boardDelta.remove, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  board.clearNode(node);
+               });
+            });
+         }
       },
    },
 });
@@ -119,8 +124,8 @@ Class('CinderblockGame', {
 
       handleMoveEvent : function(move_event){
          this.game_events.push(move_event);
-         this.getActual_board().applyDelta(move_event.delta);
-         this.actual_turn = move_event.turn_after;
+         this.getActual_board().applyBoardDelta(move_event.delta.board);
+         this.actual_turn = move_event.delta.turn.after;
          this.onNewGameEvent(move_event); //cb
          this.onTotalGameEventsChange (this.game_events.length);
       },
@@ -277,6 +282,7 @@ Class ('CinderblockView', {
       canvasHeight: function(){return this.getFinalCanvas().height},
 
 
+      can_toggle_chain_state: function() {return false;}, //what
       can_move : function(){
          if(PORTAL_DATA.role == 'watcher')
             return 0;
@@ -565,19 +571,25 @@ Class ('CinderblockView', {
          $('body').append(this.BAR_CONTAINER);
       },
 
-      applyDeltaToCanvas : function(delta){
+      applyBoardDeltaToCanvas : function(boardDelta){
          var view = this;
-         var removes = delta.remove;
-         var adds = delta.add;
-         $.each(removes, function(){
-            var node = this[1];
-            view.clearNode(node);
-         });
-         $.each(adds, function(){
-            var stone = this[0];
-            var node = this[1];
-            view.dropStone(stone, node);
-         });
+            console.log(boardDelta);
+         if(boardDelta.add != null){
+            $.each(boardDelta.add, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  view.dropStone(color, node);
+               });
+            });
+         }
+         if(boardDelta.remove != null){
+            $.each(boardDelta.remove, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  view.clearNode(node);
+               });
+            });
+         }
       },
       dropStone : function(stone, node){
          if (this.shadow_node)
@@ -651,26 +663,26 @@ Class ('CinderblockView', {
       },
 
       eraseLastMoveMark: function(){
-         if( this.lastMoveMarkStone == null) //nothing marked.
+         if( this.lastMoveMarkColor == null) //nothing marked.
             return;
-         this.dropStone (this.lastMoveMarkStone, this.lastMoveMarkNode);
+         this.dropStone (this.lastMoveMarkColor, this.lastMoveMarkNode);
          this.redrawNodeOnFinal(this.lastMoveMarkNode);
-         this.lastMoveMarkStone = null;
+         this.lastMoveMarkColor = null;
          this.lastMoveMarkNode = null;
       },
       markLastMove: function(){
          if(this.virtualMoveNum == 0)
             return;
-         var delta = this.game.game_events[this.virtualMoveNum-1].delta;
-         if(delta == null)
+         var boardDelta = this.game.game_events[this.virtualMoveNum-1].delta.board;
+         if(boardDelta == null)
             return;
-         if(delta.add.length != 1){
+         if(boardDelta.add == null){
             this.game.log('FOOOOOOOOO?');
             return;
          }
-         var stone_to_mark = delta.add[0][0];
-         var node_to_mark = delta.add[0][1];
-         this.lastMoveMarkStone = stone_to_mark;
+         var color = Object.keys(boardDelta.add)[0]
+         var node_to_mark = boardDelta.add[color][0];
+         this.lastMoveMarkColor = color;
          this.lastMoveMarkNode = node_to_mark;
 
          var point = this.nodeToPoint(node_to_mark);
@@ -681,7 +693,7 @@ Class ('CinderblockView', {
          ctx.save();
          ctx.beginPath();
          ctx.lineWidth=4;
-         ctx.strokeStyle= (stone_to_mark == 'w') ? "black" : 'white';
+         ctx.strokeStyle= (color == 'w') ? "black" : 'white';
          ctx.moveTo(x+r, y);
          ctx.arc(x, y, r, 0, Math.PI*2, true); 
          ctx.closePath();
@@ -820,7 +832,7 @@ Class ('CinderblockView', {
             while (destMoveNum != this.virtualMoveNum){
                var event_to_apply = this.game.game_events[this.virtualMoveNum];
                if(event_to_apply.delta != null)
-                  this.applyDeltaToCanvas(event_to_apply.delta);
+                  this.applyBoardDeltaToCanvas(event_to_apply.delta.board);
                if(event_to_apply.captures != null){
                   $.each(event_to_apply.captures, function(color,diff){
                      view.virtualCaptures[color] += diff;
@@ -841,16 +853,35 @@ Class ('CinderblockView', {
             while (destMoveNum != this.virtualMoveNum){
                var event_to_reverse = this.game.game_events[this.virtualMoveNum-1];
                var delta = event_to_reverse.delta;
-               if(delta != null){
+               var reversed_delta = {};
+               if(delta.turn != null){
+                  reversed_delta.turn = {
+                     before: delta.turn.after,
+                     after: delta.turn.before,
+                  };
+               }
+               if(delta.board != null){
+                  reversed_delta.board = {};
+                  if(delta.board.add != null)
+                     reversed_delta.board.remove = delta.board.add;
+                  if(delta.board.remove != null)
+                     reversed_delta.board.add= delta.board.remove;
+               }
+               if(delta.captures  != null){}
+
+               this.applyBoardDeltaToCanvas(reversed_delta.board);
+               //this.applyCapturesDelta(reversed_delta.captures);
+
+               if(0 && (delta != null)){
                   var removes = delta.remove;
                   var adds = delta.add;
                   var reversed_delta = {
                      'add' : removes,
                      'remove' : adds,
                   };
-                  this.applyDeltaToCanvas(reversed_delta);
+                  this.applyBoardDeltaToCanvas(reversed_delta);
                }
-               if(event_to_reverse.captures != null){
+               if(0){//event_to_reverse.captures != null){
                   $.each(event_to_reverse.captures, function(color,diff){
                      view.virtualCaptures[color] -= diff;
                      view.onCapturesChange(color, view.virtualCaptures[color]);
