@@ -184,6 +184,17 @@ sub game_event_socket{
 
 use Digest::MD5 qw(md5_base64);
 
+sub crap_out{
+   my ($self,$msg) = @_;
+   my $ws = $self->tx;
+   my $denial = {
+      type => 'denial',
+      denial => $msg,
+   };
+   $ws->send($json->encode($denial));
+}
+use Carp::Always;
+
 # request made through websocket.
 sub attempt_move{
    my ($self, $msg) = @_;
@@ -191,14 +202,14 @@ sub attempt_move{
    my $game = $self->model->game($game_id);
    #can move?
    my $move_attempt = $msg->{move_attempt};
-   return unless $game->status eq 'active';
    my $turn = $game->turn;
    my $color = $move_attempt->{color};
-   return unless $color eq $turn;
+   return $self->crap_out(0) unless $game->status eq 'active';
+   return $self->crap_out(1) unless $color eq $turn;
    my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
-   return unless (defined $turn_ident);
-   return unless ($turn_ident->{id} == $self->ident->{id});
+   return $self->crap_out(2) unless (defined $turn_ident);
+   return $self->crap_out(3) unless ($turn_ident->{id} == $self->ident->{id});
    # Can Move!
    # valid move?
    my %eval_result; #newboard, move_hash, delta,...
@@ -227,7 +238,7 @@ sub attempt_move{
          color => $color,
          node => $node,);
       # $caps is just a list of nodes.
-      if($result->failed){return}
+      if($result->failed){return $self->crap_out(4)}
       my $newboard = $result->resulting_state->board;
       # now normalize & hash the board, check for collisions, & later store hash in event..
       my $normalized_state = $color .':'. $rulemap->normalize_board_to_string($newboard);
@@ -235,14 +246,14 @@ sub attempt_move{
       my $ko_collision =   
          grep {$_->{move_hash} && ($_->{move_hash} eq $move_hash)} 
          @{$game->game_events_ref};
-      if($ko_collision){return}
+      if($ko_collision){return $self->crap_out(5)}
 
       %eval_result = (
          newboard => $newboard,
-         #turn => ($stone eq 'w') ? 'b' : 'w',
          move_hash => $move_hash,
-         delta => $rulemap->delta($board, $newboard),
-         caps => scalar 0, # $result->caps
+         delta => $result->delta,
+         #caps => scalar 0, # $result->caps
+         #turn => ($stone eq 'w') ? 'b' : 'w',
       );
    }
    #if (scalar @$caps){
@@ -250,17 +261,24 @@ sub attempt_move{
    #}
 
    # Valid Move!
-   $game->board ($eval_result{newboard});
-   $game->add_captures ($color, $eval_result{caps});
-   $game->turn ($game->next_turn);
+   if($eval_result{delta}->diff_captures){
+      $game->add_captures ($color, $eval_result{caps});
+   }
+   if($eval_result{delta}->diff_board){
+      $game->board ($eval_result{newboard});
+   }
+   if($eval_result{delta}->diff_turn){
+      $game->turn ($game->next_turn);
+   }
    my $event = {
       type => 'move', 
       color => $color,
-      turn_after => $game->turn,
       time_ms => cur_time_ms(),
-      captures => {$color => $eval_result{caps}},
-      delta => $eval_result{delta},
+      delta => $eval_result{delta}->to_args,
       move_hash => $eval_result{move_hash},
+      #these 2 things in delta now:
+      #   captures => {$color => $eval_result{caps}},
+      # turn_after => $game->turn,
    };
    $game->push_event($event);
    $game->update();

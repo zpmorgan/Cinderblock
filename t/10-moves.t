@@ -70,12 +70,18 @@ use Test::Mojo;
    move_attempt( b => [1,0]);
    response($ws_t) for (1..3);
 
+   use Data::Dumper;
+#   die Dumper $res[0];
+
    my $delta1 = $res[0]{delta};
    for(0..2){
       is($res[$_]{type}, 'move', "move $_ near corner");
       is(ref $res[$_]{delta}, 'HASH', "delta in res is hash.");
    }
    is_deeply($res[0]{delta}{board}{remove}, undef, 'delta; dirst move, no remove');
+   is_deeply($res[0]{delta}{board}{add}, {b => [[0,1]]}, 'delta; first move, add 1 b');
+   is_deeply($res[0]{delta}{turn}, {before=>'b', after=>'w'}, 'delta; turn, b to w');
+   is_deeply($res[0]{delta}{captures}, undef, 'first move; no captures (!defined)');
 }
 done_testing;
 __END__
