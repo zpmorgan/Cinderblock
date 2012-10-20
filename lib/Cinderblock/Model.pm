@@ -9,12 +9,28 @@ my $json = Mojo::JSON->new();
 
 use Cinderblock::Model::Game;
 
+use Carp qw/confess/;
+use Carp::Always;
+
+our $default_timeout = 1<<31;
+
+has sub_redis => (
+   isa => 'Mojo::Redis',
+   is => 'rw',
+   lazy => 1,
+   default => sub{
+      my $sr = Mojo::Redis->new()->timeout($default_timeout);
+      $sr->on(error => sub{say join '|',grep{defined $_} @_;});
+      return $sr;
+   },
+);
+
 has pub_redis => (
    isa => 'Mojo::Redis',
    is => 'rw',
    lazy => 1,
    default => sub{
-      Mojo::Redis->new()->timeout(1<<28);
+      Mojo::Redis->new()->timeout($default_timeout);
    },
 );
 has getset_redis => (
@@ -22,12 +38,12 @@ has getset_redis => (
    is => 'rw',
    lazy => 1,
    default => sub{
-      my $r = Mojo::Redis->new()->timeout(1<<28);
+      my $r = Mojo::Redis->new()->timeout($default_timeout);
       $r->on(error => sub{
          my($redis, $error) = @_;
          say "[getset REDIS ERROR!] $error";
       });
-      $r->on(close => sub{warn 'getset redis closes???'});
+      $r->on(close => sub{say 'getset REDIS closes!'});
       $r;
    },
 );
@@ -38,7 +54,6 @@ has block_redis => (
    is => 'rw',
 );
 
-use Carp qw/confess/;
 
 sub _new_blocking_redis{
    my $self = shift;
@@ -59,10 +74,9 @@ sub _new_blocking_redis{
          $self->block_redis($self->_new_blocking_redis);
          confess();
       });
-   $block_redis->timeout(1<<29);
+   $block_redis->timeout($default_timeout);
    return $block_redis 
 };
-
 
 sub redis_block{
    my $self = shift;
@@ -77,24 +91,6 @@ sub redis_block{
    return $results[0] unless wantarray;
    return @results;
 };
-
-
-
-sub new_sub_redis{
-   my $self = shift;
-   my $sub_redis = Mojo::Redis->new();
-   $sub_redis->timeout(2*3600);
-   $sub_redis->on(error => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS ERROR] $error\n";
-      });
-   $sub_redis->on(close => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS] CLOSE...\n";
-      });
-   $sub_redis->connect;
-   return $sub_redis;
-}
 
 
 # get game.. 

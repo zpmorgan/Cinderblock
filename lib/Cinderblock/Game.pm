@@ -4,13 +4,10 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-#use Basilisk::Rulemap;
-#use Basilisk::Rulemap::Rect;
 use Games::Go::Cinderblock::Rulemap;
 use Games::Go::Cinderblock::Rulemap::Rect;
 
-# use Cinderblock::Model;
-
+use Cinderblock::Model;
 use Time::HiRes;
 
 sub cur_time_ms{
@@ -112,7 +109,6 @@ sub do_game{
          my $other_color = ($self->stash('my_colors')->[0] eq'b') ?'w':'b';
          my $invitecode = int rand(2<<30);
          my $invite = {game_id => $game_id, color => $other_color};
-         #my $timeout = 10000;
          $self->getset_redis->hset(invite => $invitecode => $json->encode($invite));
          $self->stash(invite_code => $invitecode);
       }
@@ -120,30 +116,18 @@ sub do_game{
    $self->render(template => 'game/index');
 }
 
-# This action will render a template
 sub game_event_socket{
    my $self = shift;
    my $game_id = $self->stash('game_id');
-#   warn("Client Connect: ".$self->tx);
    my $ws = $self->tx;
-   
-   my $sub_redis = Mojo::Redis->new(timeout => 2*3600);
-   $sub_redis->timeout(2*3600);
-   $sub_redis->on(error => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS ERROR] $error\n";
-      });
-   $sub_redis->on(close => sub{
-         my($redis, $error) = @_;
-         warn "[sub_REDIS] CLOSE...\n";
-      });
-   #$sub_redis->protocol_redis("Protocol::Redis::XS");
-   #$sub_redis->timeout(180000);
-   $self->stash(sub_redis => $sub_redis);
+   my $sub_redis = $self->model->sub_redis;
    # push game events when they come down the tube.
    $sub_redis->subscribe('game_events:'.$game_id => sub{
          my ($redis, $event) = @_;
-         return if $event->[0] eq 'subscribe';
+         if ($event->[0] eq 'subscribe'){
+            $self->stash(sub_redis => $sub_redis);
+            return;
+         }
          $ws->send($event->[2]);
       });
    my $game = $self->model->game($game_id);
@@ -169,6 +153,10 @@ sub game_event_socket{
          elsif($action eq 'attempt_toggle'){
             $self->attempt_toggle_stone_state($msg_data);
          }
+         elsif($action eq 'ping'){
+            $ws->send('{"event_type":"pong"}');
+         }
+         # else pong?
       });
    $self->on(finish => sub {
          my $ws = shift;
@@ -177,13 +165,15 @@ sub game_event_socket{
    my $event = {event_type => 'hello', hello=>'hello'};
    $ws->send($json->encode($event));
    Mojo::IOLoop->recurring(10 => sub{
-         my $event = {event_type => 'hello', hello=>'hello'};
+         my $event = {event_type => 'ping', ping=>'ping'};
          $ws->send($json->encode($event));
       });
 }
 
 use Digest::MD5 qw(md5_base64);
 
+# for when a move attempt fails: 
+# return $self->crap_out ($reason)
 sub crap_out{
    my ($self,$msg) = @_;
    my $ws = $self->tx;
@@ -362,7 +352,7 @@ sub happychat{
    my $self = shift;
    my $ws = $self->tx;
    my $channel_name = $self->stash('channel');
-   my $sub_redis = $self->model->new_sub_redis();
+   my $sub_redis = $self->model->sub_redis();
    $self->stash(hc_redis => $sub_redis);
    
    # push sad msg events when they come down the tube.
@@ -378,7 +368,10 @@ sub happychat{
    });
    $sub_redis->subscribe($hc_channel_name => sub{
          my ($redis, $event) = @_;
-         return if $event->[0] eq 'subscribe';
+         if ($event->[0] eq 'subscribe'){
+            $self->stash(sub_redis => $redis);
+            return;
+         };
          $ws->send($event->[2]);
       });
    $self->on(message => sub {
@@ -422,8 +415,8 @@ sub happychat{
 sub sadchat{
    my $self = shift;
    my $ws = $self->tx;
-   my $sub_redis = $self->model->new_sub_redis;
-   $self->stash(sub_redis => $sub_redis);
+   my $sub_redis = $self->model->sub_redis;
+   #$self->stash(sub_redis => $sub_redis);
 
    $self->getset_redis->lrange('sadchat_messages', 0, 100, sub{
          my ($redis, $res) = @_;
@@ -434,7 +427,10 @@ sub sadchat{
    # push sad msg events when they come down the tube.
    $sub_redis->subscribe('sadchat' => sub{
          my ($redis, $event) = @_;
-         return if $event->[0] eq 'subscribe';
+         if ($event->[0] eq 'subscribe'){
+            $self->stash(sub_redis => $redis);
+            return;
+         }
          $ws->send($event->[2]);
       });
    $self->on(message => sub {

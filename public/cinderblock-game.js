@@ -193,6 +193,9 @@ Class('CinderblockGame', {
             else if (msg.type == 'status_change'){
                game.handleStatusChange(msg);
             }
+            else if (msg.type == 'ping'){
+               game.sock.send(JSON.stringify({action:'pong'}));
+            }
          };
          this.sock.onopen = function () {
             game.log('Socket open');
@@ -573,7 +576,6 @@ Class ('CinderblockView', {
 
       applyBoardDeltaToCanvas : function(boardDelta){
          var view = this;
-            console.log(boardDelta);
          if(boardDelta.add != null){
             $.each(boardDelta.add, function(color,nodes){
                $.each(nodes, function(){

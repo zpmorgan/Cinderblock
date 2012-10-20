@@ -4,21 +4,8 @@ use Cinderblock::Model;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-use Mojo::Redis;
-#use Protocol::Redis::XS;
-our $pub_redis;# = Mojo::Redis->new();
-#our $getset_redis;# = Mojo::Redis->new();
-
 our $model = Cinderblock::Model->instance;
 use Carp;
-sub mention_on_err_and_close{ 
-   my ($self,$redis, $nam) = @_;;
-   $redis->on(error => sub{
-         my($redis, $error) = @_;
-         warn "[REDIS ERROR] $error\n";
-      });
-   $redis->on(close => sub{ warn "[$nam REDIS] Close.]";});
-}
 
 # This method will run once at server start
 sub startup {
@@ -28,14 +15,12 @@ sub startup {
    my $config = $self->plugin('JSONConfig');
 
    $self->secret('$skppxa>adsions->default_expikcvion(3fs00); #100 foos');
-   $self->sessions->default_expiration(3600000); #1000 hours
+   $self->sessions->default_expiration(36000000); #10000 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
 
    $self->helper (model => sub{
-      #return $model if $model;
-      #$model = Cinderblock::Model->new();
-      #it's a singleton now.
+      # it's a singleton
       return $model;
    });
 
@@ -75,8 +60,6 @@ sub startup {
          return ($ident->{anon} ? 0 : 1);
       });
 
-   my $seeded = 0;
-   my $redis; 
    $self->helper (redis_block => sub{
          my $self = shift;
          my @results = $self->model->redis_block(@_);
