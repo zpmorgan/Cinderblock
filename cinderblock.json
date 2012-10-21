@@ -1,2 +1,8 @@
 
-  {"hypnotoad" : {"listen" : ["http://*:3333"], "workers" : 2}}
+  {"hypnotoad" : {
+                    "listen" : ["http://*:3333"], 
+                    "workers" : 2,
+
+                    "lock_timeout" : 2
+                 }
+  }

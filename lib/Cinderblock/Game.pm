@@ -123,13 +123,11 @@ sub game_event_socket{
    say 'OPEN_GAME_SOCK ' . $game_id;
    my $ws = $self->tx;
    my $sub_redis = $self->model->sub_redis->timeout(15);
+   $sub_redis->on(close => sub{say "GAM $game_id REDIS SUB IS CLOSIGN"});
    # push game events when they come down the tube.
    $sub_redis->subscribe('game_events:'.$game_id , 'DONTDIEONME' => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
-            #Scalar::Util::weaken($redis);
-            #$self->stash(game_sub_redis => $sub_redis);
-            #$redis->on(close => sub{say $redis . 'game_alfjd closing'});
             return;
          }
          return if ($event->[2] eq 'ping');
@@ -165,12 +163,17 @@ sub game_event_socket{
       });
    $self->on(finish => sub {
          my $ws = shift;
-         #my $sub_redis = $self->stash('game_sub_redis');
-         #delete $self->stash->{game_sub_redis};
-         $sub_redis->disconnect;
-         #$sub_redis->timeout(2);
+         #$sub_redis->disconnect;
          #$sub_redis->ioloop->remove($sub_redis->{_connection});
          say 'Game WebSocket closed.';
+         $sub_redis->DESTROY;
+         return;
+         #my @ids = ($sub_redis->{_connection}, keys %{$sub_redis->{_ids}});
+         #for (@ids){
+         #   $sub_redis->ioloop->remove($_);
+         #}
+         #delete $sub_redis->{_connection};
+         #delete $sub_redis->{_ids};
       });
    my $event = {event_type => 'hello', hello=>'hello'};
    $ws->send($json->encode($event));
@@ -381,8 +384,6 @@ sub happychat{
    $sub_redis->subscribe($hc_channel_name, 'DONTDIEONME' => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
-            #$redis->on(close => sub{say 'happy snghub_regdgis closing'});
-            #$self->stash(hc_sub_redis => $redis);
             return;
          };
          return if ($event->[2] eq 'ping');
@@ -427,7 +428,8 @@ sub happychat{
          my $ws = shift;
          #my $sub_redis = $self->stash('hc_sub_redis');
          #delete $self->stash->{hc_sub_redis};
-         $sub_redis->disconnect;
+         #$sub_redis->disconnect;
+         $sub_redis->DESTROY;
          #$sub_redis->timeout(2);
          #$sub_redis->ioloop->remove($sub_redis->{_connection});
          say 'hc WebSocket closed.';

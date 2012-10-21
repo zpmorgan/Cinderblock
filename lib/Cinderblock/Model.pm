@@ -28,6 +28,7 @@ sub sub_redis{
    my $self = shift;
    my $sr = Mojo::Redis->new()->timeout($default_timeout);
    $sr->on(error => sub{say join '|',grep{defined $_} @_;});
+   #$sr->on(close => sub{say join '|',grep{defined $_} @_;});
    return $sr;
 }
 
@@ -122,7 +123,7 @@ sub invite{
 
 sub recently_active_games{
    my ($self,$n) = @_;
-   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', 0,$n-1);
+   my $actives = $self->redis_block(ZREVRANGE => 'recently_actives_game_ids', 0,$n-1) // [];
    return @$actives;
 }
 
