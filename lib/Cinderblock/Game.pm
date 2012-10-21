@@ -3,6 +3,7 @@ use Modern::Perl;;
 use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
+use Mojo::Redis;
 
 use Games::Go::Cinderblock::Rulemap;
 use Games::Go::Cinderblock::Rulemap::Rect;
@@ -119,14 +120,16 @@ sub do_game{
 sub game_event_socket{
    my $self = shift;
    my $game_id = $self->stash('game_id');
+   say 'OPEN_GAME_SOCK ' . $game_id;
    my $ws = $self->tx;
    my $sub_redis = $self->model->sub_redis;
    # push game events when they come down the tube.
    $sub_redis->subscribe('game_events:'.$game_id => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
-            $self->stash(game_sub_redis => $sub_redis);
-            $redis->on(close => sub{say 'game_alfjd closing'});
+            #Scalar::Util::weaken($redis);
+            $self->stash(game_sub_redis => $redis);
+            #$redis->on(close => sub{say $redis . 'game_alfjd closing'});
             return;
          }
          $ws->send($event->[2]);
@@ -161,7 +164,12 @@ sub game_event_socket{
       });
    $self->on(finish => sub {
          my $ws = shift;
-         say 'WebSocket closed.';
+         my $sub_redis = $self->stash('game_sub_redis');
+         delete $self->stash->{game_sub_redis};
+         $sub_redis->disconnect;
+         #$sub_redis->timeout(2);
+         #$sub_redis->ioloop->remove($sub_redis->{_connection});
+         say 'Game WebSocket closed.';
       });
    my $event = {event_type => 'hello', hello=>'hello'};
    $ws->send($json->encode($event));
@@ -371,7 +379,7 @@ sub happychat{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
             $redis->on(close => sub{say 'happy snghub_regdgis closing'});
-            $self->stash(sub_redis => $redis);
+            $self->stash(hc_sub_redis => $redis);
             return;
          };
          $ws->send($event->[2]);
@@ -411,6 +419,15 @@ sub happychat{
          $self->getset_redis->rpush("archive:$channel_store_name" => $happy_msg_out);#archive?
       }
    });
+   $self->on(finish => sub {
+         my $ws = shift;
+         my $sub_redis = $self->stash('hc_sub_redis');
+         delete $self->stash->{hc_sub_redis};
+         $sub_redis->disconnect;
+         #$sub_redis->timeout(2);
+         #$sub_redis->ioloop->remove($sub_redis->{_connection});
+         say 'hc WebSocket closed.';
+      });
 }
 
 

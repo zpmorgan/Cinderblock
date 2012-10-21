@@ -30,10 +30,11 @@ has pub_redis => (
    is => 'rw',
    lazy => 1,
    default => sub{
-      Mojo::Redis->new()->timeout($default_timeout);
+      my $sr = Mojo::Redis->new()->timeout($default_timeout);
+      $sr->on(error => sub{say join ' \o/ PUB! \o/ ',grep{defined $_} @_;});
+      return $sr;
    },
 );
-my $hkSdfhagkgfksjadfl;
 has getset_redis => (
    isa => 'Mojo::Redis',
    is => 'rw',
@@ -41,7 +42,6 @@ has getset_redis => (
    default => sub{
       my $r = Mojo::Redis->new()->timeout($default_timeout);
       $r->ioloop->recurring(60 => sub{$r->get('DONTDIEONME',sub{})});
-      #$hkSdfhagkgfksjadfl = $r;
       $r->on(error => sub{
          my($redis, $error) = @_;
          say "[getset REDIS ERROR!] $error";
