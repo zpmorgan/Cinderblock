@@ -14,7 +14,7 @@ use Carp::Always;
 
 our $default_timeout = 1<<31;
 
-has sub_redis => (
+has FOO_sub_redis => (
    isa => 'Mojo::Redis',
    is => 'rw',
    lazy => 1,
@@ -24,6 +24,12 @@ has sub_redis => (
       return $sr;
    },
 );
+sub sub_redis{
+   my $self = shift;
+   my $sr = Mojo::Redis->new()->timeout($default_timeout);
+   $sr->on(error => sub{say join '|',grep{defined $_} @_;});
+   return $sr;
+}
 
 has pub_redis => (
    isa => 'Mojo::Redis',

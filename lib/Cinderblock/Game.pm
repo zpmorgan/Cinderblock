@@ -122,16 +122,17 @@ sub game_event_socket{
    my $game_id = $self->stash('game_id');
    say 'OPEN_GAME_SOCK ' . $game_id;
    my $ws = $self->tx;
-   my $sub_redis = $self->model->sub_redis;
+   my $sub_redis = $self->model->sub_redis->timeout(15);
    # push game events when they come down the tube.
-   $sub_redis->subscribe('game_events:'.$game_id => sub{
+   $sub_redis->subscribe('game_events:'.$game_id , 'DONTDIEONME' => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
             #Scalar::Util::weaken($redis);
-            $self->stash(game_sub_redis => $redis);
+            #$self->stash(game_sub_redis => $sub_redis);
             #$redis->on(close => sub{say $redis . 'game_alfjd closing'});
             return;
          }
+         return if ($event->[2] eq 'ping');
          $ws->send($event->[2]);
       });
    my $game = $self->model->game($game_id);
@@ -164,8 +165,8 @@ sub game_event_socket{
       });
    $self->on(finish => sub {
          my $ws = shift;
-         my $sub_redis = $self->stash('game_sub_redis');
-         delete $self->stash->{game_sub_redis};
+         #my $sub_redis = $self->stash('game_sub_redis');
+         #delete $self->stash->{game_sub_redis};
          $sub_redis->disconnect;
          #$sub_redis->timeout(2);
          #$sub_redis->ioloop->remove($sub_redis->{_connection});
@@ -361,8 +362,9 @@ sub happychat{
    my $self = shift;
    my $ws = $self->tx;
    my $channel_name = $self->stash('channel');
-   my $sub_redis = $self->model->sub_redis();
-   $self->stash(hc_redis => $sub_redis);
+   my $sub_redis = $self->model->sub_redis->timeout(15);
+   $sub_redis->on(close => sub{say 'happy snghub_regdgis closing'});
+   #$self->stash(hc_redis => $sub_redis);
    
    # push sad msg events when they come down the tube.
    # put into a redis list:
@@ -375,13 +377,15 @@ sub happychat{
             $ws->send($m);
          }
    });
-   $sub_redis->subscribe($hc_channel_name => sub{
+
+   $sub_redis->subscribe($hc_channel_name, 'DONTDIEONME' => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
-            $redis->on(close => sub{say 'happy snghub_regdgis closing'});
-            $self->stash(hc_sub_redis => $redis);
+            #$redis->on(close => sub{say 'happy snghub_regdgis closing'});
+            #$self->stash(hc_sub_redis => $redis);
             return;
          };
+         return if ($event->[2] eq 'ping');
          $ws->send($event->[2]);
       });
    $self->on(message => sub {
@@ -421,8 +425,8 @@ sub happychat{
    });
    $self->on(finish => sub {
          my $ws = shift;
-         my $sub_redis = $self->stash('hc_sub_redis');
-         delete $self->stash->{hc_sub_redis};
+         #my $sub_redis = $self->stash('hc_sub_redis');
+         #delete $self->stash->{hc_sub_redis};
          $sub_redis->disconnect;
          #$sub_redis->timeout(2);
          #$sub_redis->ioloop->remove($sub_redis->{_connection});

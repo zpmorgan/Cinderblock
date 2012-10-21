@@ -87,6 +87,10 @@ sub startup {
          return $ws_url_base;
       });
 
+   Mojo::IOLoop->recurring(10 => sub{
+         $self->model->pub_redis->publish('DONTDIEONME', 'ping');
+      });
+
    # Router
    my $r = $self->routes;
 
