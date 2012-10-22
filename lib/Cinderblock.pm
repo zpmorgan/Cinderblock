@@ -104,7 +104,6 @@ sub startup {
    # routes to game controller
    $r->get('/')->to('game#welcome');
    $r->get('/about')->to('game#about');
-   $r->websocket('/happy/:channel')->to('game#happychat');
    $r->get('/activity/')->to('game#activity');
    $r->get('/new_game/')->to('game#new_game_form');
    $r->post('/new_game/')->to('game#new_game');
@@ -112,6 +111,9 @@ sub startup {
    my $game_r = $r->route('/game/:game_id', game_id => qr/\d+/);
    $game_r->get('')->to('game#do_game');
    $game_r->websocket('sock')->to('game#game_event_socket');
+
+   #another controller.
+   $r->websocket('/happy/:channel')->to('happy#happychat');
 }
 
 1;
