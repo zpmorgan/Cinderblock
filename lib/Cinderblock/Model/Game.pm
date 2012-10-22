@@ -135,9 +135,16 @@ sub add_captures{
    $self->data->{captures}{$color} = 
       $n + ( $self->data->{captures}{$color} // 0) ;
 }
+# $game->captures($color => $caps_delt->{$color}{after});
 sub captures{
-   my ($self, $color) = @_;
-   return ( $self->data->{captures}{$color} // 0) ;
+   my ($self, $color, $newval) = @_;
+   unless ($color =~ /^[bw]$/){
+      return $self->data->{captures};
+   }
+   if($newval){
+      $self->data->{captures}{$color} = $newval;
+   }
+   return ( $self->data->{captures}{$color} ) ;
 }
 sub board {
    $_[0]->data->{board} = $_[1] if $_[1];

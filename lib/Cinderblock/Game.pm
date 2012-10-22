@@ -234,6 +234,7 @@ sub attempt_move{
          rulemap => $rulemap,
          turn => $game->turn,
          board => $board,
+         captures => $game->captures,
       );
       #my ($newboard,$fail,$caps) =
       #$rulemap->evaluate_move($board, $node, $color);
@@ -265,7 +266,10 @@ sub attempt_move{
 
    # Valid Move!
    if($eval_result{delta}->diff_captures){
-      $game->add_captures ($color, $eval_result{caps});
+      my $caps_delt = $eval_result{delta}->captures;
+      for my $color(keys %$caps_delt){
+         $game->captures($color => $caps_delt->{$color}{after});
+      }
    }
    if($eval_result{delta}->diff_board){
       $game->board ($eval_result{newboard});
