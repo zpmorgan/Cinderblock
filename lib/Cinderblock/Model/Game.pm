@@ -138,9 +138,10 @@ sub add_captures{
 # $game->captures($color => $caps_delt->{$color}{after});
 sub captures{
    my ($self, $color, $newval) = @_;
-   unless ($color =~ /^[bw]$/){
+   unless ($color){
       return $self->data->{captures};
    }
+   die "notacolor $color" unless ($color =~ /^[bw]$/);
    if($newval){
       $self->data->{captures}{$color} = $newval;
    }
