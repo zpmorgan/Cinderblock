@@ -580,7 +580,6 @@ Class ('CinderblockView', {
 
       applyBoardDeltaToCanvas : function(boardDelta){
          var view = this;
-         console.log(boardDelta);
          if(boardDelta.add != null){
             $.each(boardDelta.add, function(color,nodes){
                $.each(nodes, function(){
