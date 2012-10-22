@@ -183,8 +183,6 @@ sub game_event_socket{
       });
 }
 
-use Digest::MD5 qw(md5_base64);
-
 # for when a move attempt fails: 
 # return $self->crap_out ($reason)
 sub crap_out{
@@ -197,6 +195,7 @@ sub crap_out{
    $ws->send($json->encode($denial));
 }
 use Carp::Always;
+use Digest::MD5 qw(md5_base64);
 
 # request made through websocket.
 sub attempt_move{
@@ -207,6 +206,7 @@ sub attempt_move{
    my $move_attempt = $msg->{move_attempt};
    my $turn = $game->turn;
    my $color = $move_attempt->{color};
+   $game->status ('active') if($game->status eq 'scoring');
    return $self->crap_out(0) unless $game->status eq 'active';
    return $self->crap_out(1) unless $color eq $turn;
    my $roles = $game->roles;
@@ -300,13 +300,15 @@ sub attempt_pass{
    return unless ($turn_ident->{id} == $self->ident->{id});
    # success!
    $game->turn ($game->next_turn);
+   say $game->turn ;
    my $event = {
       type => 'pass', 
       color => $color,
-      turn_after => $game->turn,
+      #turn_after => $game->turn,
       time_ms => cur_time_ms(),
+      delta => {turn => {before => $color, after => $game->turn}},
    };
-   if($game->is_doubly_passed){
+   if($game->last_move_was_pass){
       $game->set_status_scoring;
       $event->{status_after} = 'scoring';
    }
@@ -333,10 +335,11 @@ sub attempt_resign{
    my $event = {
       type => 'resign', 
       color => $color,
-      turn_after => 'none', 
+      #turn_after => 'none', 
       time_ms => cur_time_ms(),
       winner => $game->winner,
       status_after => 'finished',
+      delta => {turn => {before => $color, after => ''}},
    };
    $game->push_event($event);
    $game->update();

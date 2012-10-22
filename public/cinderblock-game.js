@@ -131,7 +131,10 @@ Class('CinderblockGame', {
       },
       handlePassEvent : function(pe){
          this.game_events.push(pe);
-         this.actual_turn = pe.turn_after;
+         var delta = pe.delta;
+         if(delta && delta.turn){
+            this.actual_turn = delta.turn.after;
+         }
          this.onNewGameEvent(pe); //cb
          this.onTotalGameEventsChange (this.game_events.length);
       },
@@ -229,6 +232,7 @@ Class('CinderblockGame', {
                "color": this.actual_turn,
             }
          };
+         console.log(attempt);
          this.sock.send(JSON.stringify(attempt));
       },
       attemptResign : function(node){
@@ -576,6 +580,7 @@ Class ('CinderblockView', {
 
       applyBoardDeltaToCanvas : function(boardDelta){
          var view = this;
+         console.log(boardDelta);
          if(boardDelta.add != null){
             $.each(boardDelta.add, function(color,nodes){
                $.each(nodes, function(){
@@ -833,12 +838,13 @@ Class ('CinderblockView', {
             // go forwards in time
             while (destMoveNum != this.virtualMoveNum){
                var event_to_apply = this.game.game_events[this.virtualMoveNum];
-               if(event_to_apply.delta != null)
-                  this.applyBoardDeltaToCanvas(event_to_apply.delta.board);
-               if(event_to_apply.captures != null){
-                  $.each(event_to_apply.captures, function(color,diff){
-                     view.virtualCaptures[color] += diff;
-                     view.onCapturesChange(color, view.virtualCaptures[color]);
+               var delta = event_to_apply.delta;
+               if(delta.board != null)
+                  this.applyBoardDeltaToCanvas(delta.board);
+               if(delta.captures != null){
+                  $.each(delta.captures, function(color,delt){
+                     view.virtualCaptures[color] = delt.after;
+                     view.onCapturesChange(color, delt.after);
                   });
                }
                this.virtualMoveNum++;
@@ -869,26 +875,18 @@ Class ('CinderblockView', {
                   if(delta.board.remove != null)
                      reversed_delta.board.add= delta.board.remove;
                }
-               if(delta.captures  != null){}
-
-               this.applyBoardDeltaToCanvas(reversed_delta.board);
-               //this.applyCapturesDelta(reversed_delta.captures);
-
-               if(0 && (delta != null)){
-                  var removes = delta.remove;
-                  var adds = delta.add;
-                  var reversed_delta = {
-                     'add' : removes,
-                     'remove' : adds,
-                  };
-                  this.applyBoardDeltaToCanvas(reversed_delta);
-               }
-               if(0){//event_to_reverse.captures != null){
-                  $.each(event_to_reverse.captures, function(color,diff){
-                     view.virtualCaptures[color] -= diff;
-                     view.onCapturesChange(color, view.virtualCaptures[color]);
+               if(delta.captures  != null){
+                  $.each(delta.captures, function(color,delt){
+                     view.virtualCaptures[color] = delt.before;
+                     view.onCapturesChange(color, delt.before);
                   });
                }
+
+               if(reversed_delta.board != null){
+                  this.applyBoardDeltaToCanvas(reversed_delta.board);
+               }
+               //this.applyCapturesDelta(reversed_delta.captures);
+
                this.virtualMoveNum--;
             }
             this.onVirtualMoveChange(this.virtualMoveNum);

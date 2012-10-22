@@ -190,7 +190,12 @@ sub is_doubly_passed{
    }
    return 1
 }
-
+sub last_move_was_pass{
+   my $self = shift;
+   return 0 if @{$self->data->{game_events}} < 1;
+   return 0 if $self->data->{game_events}->[-1]->{type} ne 'pass';
+   return 1;
+}
 # each game in scoring mode has a 'scorable', which is a description
 # of the current state of scoring negotiations.
 # ->{approval} is hashref: color => (color approves)?; 
