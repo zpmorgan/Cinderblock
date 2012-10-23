@@ -212,6 +212,8 @@ sub atomic_score_op{
    my ($self,$op) = @_;
    my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve? exit_scoring?
    my $scorable_key = "scorable:" . $self->id;
+   die $scorable_key;
+
    $self->redis_block(WATCH => $scorable_key);
    my $scorable = $self->redis_block(GET => $scorable_key);
    $scorable = $json->decode($scorable);

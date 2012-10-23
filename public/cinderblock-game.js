@@ -399,7 +399,10 @@ Class ('CinderblockView', {
          // mouse handler..
          $(this.getFinalCanvas()).mousedown(function(e_down){
             // left mouse button == Move!
-            if(e_down.which == 1){
+            var down_button = e_down.which;
+            if(down_button == 1){
+               if(view.in_grab == true)
+                  return;
                var point = mouseEventToRelative(e_down);
                var boardnode = view.canvasXYToNode(point[0],point[1]);
                if(!boardnode){ return;}
@@ -413,18 +416,24 @@ Class ('CinderblockView', {
                }
             }
             // right mouse button == drag!
-            if(e_down.which == 3){
+            // right or middle, resp.
+            if(down_button == 3 || down_button == 2){
                e_down.preventDefault(); //no menu.
                //if(this.wrap_v || this.wrap_h){
                view.grabx = e_down.pageX;
                view.graby = e_down.pageY;
+               view.movex = e_down.pageX;
+               view.movey = e_down.pageY; //?
                view.in_grab = true;
+               view.in_grab_button = down_button;
                $(document).mousemove(function(e_move){
                   view.movex = e_move.pageX;
                   view.movey = e_move.pageY;
                   view.redrawFinalWithOffset();
                });
-               $(document).mouseup(function(e_move){
+               $(document).mouseup(function(e_up){
+                  if(e_up.which != down_button)
+                     return;
                   view.in_grab = false;
                   $(document).unbind('mouseup');
                   $(document).unbind('mousemove');
