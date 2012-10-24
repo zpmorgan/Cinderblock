@@ -75,10 +75,6 @@ sub BUILD{
    }
 }
 
-sub _build_rulemap{
-   my $self = shift;die @_;
-}
-
 sub model{
    return Cinderblock::Model->instance;
 }
@@ -251,5 +247,27 @@ sub promote_activity{
    my ($self) = @_;
    $self->model->getset_redis->zadd(recently_actives_game_ids => 1000*Time::HiRes::time(), $self->id);
 }
+
+sub _build_rulemap{
+   my $self = shift;
+   my $rulemap = Games::Go::Cinderblock::Rulemap::Rect->new(
+      w => $self->w,  h => $self->h,
+      wrap_v => $self->wrap_v,
+      wrap_h => $self->wrap_h,
+   );
+   return $rulemap;
+}
+
+sub state{
+   my $self = shift;
+   my $state = Games::Go::Cinderblock::State->new(
+      rulemap => $self->rulemap,
+      turn => $self->turn,
+      board => $self->board,
+      captures => $self->captures,
+   );
+   return $state;
+}
+
 
 1;

@@ -38,30 +38,40 @@ sub _opensock{
       $tx = shift;
       #$tx->on(error => sub{die;});
       $tx->on(finish => sub{
-            say @_;
+            say "@_" . 'FIIIIIIN';
+            $self->{sock_finished} = 1;
+            push @{$self->{msg_q}}, qw'fin fin fin' ;
          });
       $tx->on(message => sub{
             my ($tx,$msg) = @_;
             push @{$self->{msg_q}}, $msg;
-            say $msg;
-            $ua->ioloop->stop;
+            say $msg . '  Gumby';
+            #$ua->ioloop->stop;
          });
-      $ua->ioloop->stop;
+      #$ua->ioloop->stop;
    });
-   $self->ua->ioloop->start;
+   $self->ua->ioloop->one_tick while !$tx;
+   #$self->ua->ioloop->start;
    return $tx;
 }
 
 #return next message from game socket.
 sub block_sock{
    my $self = shift;
-   my $msg = shift @{$self->{msg_q}};
-   return $msg if $msg;
-
    $self->sock;
-   $self->ua->ioloop->start;
-   $msg = shift @{$self->{msg_q}};
-   $msg;
+   die 'websocket closed..' if $self->{sock_finished};
+
+   $self->{msg_q} //= [];
+
+   while (!@{$self->{msg_q}}){
+      $self->ua->ioloop->one_tick 
+   }
+   my $msg = shift @{$self->{msg_q}};
+   return $msg;
+
+   #$self->ua->ioloop->start;
+   #$msg = shift @{$self->{msg_q}};
+   #$msg;
 }
 sub decoded_block_sock{
    my $self = shift;
@@ -84,6 +94,15 @@ sub _find_ws_url{
    return 'TRY_SOME_SPOO';
 };
 
+sub do_pass_attempt{
+   my ($self, $color) = @_;
+   my $req = {
+      action=>'attempt_pass',
+      pass_attempt => {color => $color},
+   };
+   $self->sock->send( Mojo::JSON->encode($req) );
+   return $req;
+}
 
 sub do_move_attempt{
    my ($self, $color,$node) = @_;

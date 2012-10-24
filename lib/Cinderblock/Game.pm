@@ -185,9 +185,18 @@ sub game_event_socket{
 
 # for when a move attempt fails: 
 # return $self->crap_out ($reason)
+my %denial_reasons = (
+   0 => 'Game not active.',
+   1 => 'attempt color has no perogative',
+   2 => 'there is no such role for that color/game combination.',
+   3 => 'You do not have that color/game role. it is not yours.',
+   4 => 'Move invalid..',
+   5 => 'KO Collision.',
+);
 sub crap_out{
    my ($self,$msg) = @_;
    my $ws = $self->tx;
+   $msg = $msg . ': ' . ($denial_reasons{$msg} // 'FOO');
    my $denial = {
       type => 'denial',
       denial => $msg,
@@ -217,25 +226,24 @@ sub attempt_move{
    # valid move?
    my %eval_result; #newboard, move_hash, delta,...
    {
-      my $row = $move_attempt->{node}[0];
-      my $col = $move_attempt->{node}[1];
-      my $w = $game->w;
-      my $h = $game->h;
-      my $node = [$row,$col];
-
+      my $node = $move_attempt->{node};
+      #my $w = $game->w;
+      #my $h = $game->h;
       #my $rulemap = Basilisk::Rulemap::Rect->new(
-      my $rulemap = Games::Go::Cinderblock::Rulemap::Rect->new(
-         h => $h, w => $w,
-         wrap_v => $game->wrap_v,
-         wrap_h => $game->wrap_h,
-      );
-      my $board = $game->board;
-      my $state = Games::Go::Cinderblock::State->new(
-         rulemap => $rulemap,
-         turn => $game->turn,
-         board => $board,
-         captures => $game->captures,
-      );
+      #my $rulemap = Games::Go::Cinderblock::Rulemap::Rect->new(
+      #   h => $h, w => $w,
+      #   wrap_v => $game->wrap_v,
+      #   wrap_h => $game->wrap_h,
+      #);
+      my $rulemap = $game->rulemap;
+      my $state = $game->state;
+#      my $board = $game->board;
+#      my $state = Games::Go::Cinderblock::State->new(
+#         rulemap => $rulemap,
+#         turn => $game->turn,
+#         board => $board,
+#         captures => $game->captures,
+#      );
       #my ($newboard,$fail,$caps) =
       #$rulemap->evaluate_move($board, $node, $color);
       my $result = $state->attempt_move(
@@ -292,19 +300,19 @@ sub attempt_move{
 }
 sub attempt_pass{
    my ($self,$msg) = @_;
+   say $self;
    my $game_id = $self->stash('game_id');
    my $game = $self->model->game($game_id);
-   return unless $game->status eq 'active';
-   my $turn = $game->turn;
    my $color = $msg->{pass_attempt}{color};
-   return unless $color eq $turn;
+   my $turn = $game->turn;
+   return $self->crap_out(0) unless $game->status eq 'active';
+   return $self->crap_out(1) unless $color eq $turn;
    my $roles = $game->roles;
    my $turn_ident = $self->model->game_role_ident($game_id, $turn) // {};
-   return unless (defined $turn_ident);
-   return unless ($turn_ident->{id} == $self->ident->{id});
+   return $self->crap_out(2) unless (defined $turn_ident);
+   return $self->crap_out(3) unless ($turn_ident->{id} == $self->ident->{id});
    # success!
    $game->turn ($game->next_turn);
-   say $game->turn ;
    my $event = {
       type => 'pass', 
       color => $color,
@@ -312,12 +320,21 @@ sub attempt_pass{
       time_ms => cur_time_ms(),
       delta => {turn => {before => $color, after => $game->turn}},
    };
+
+   my $initialize_scorable = 0;
    if($game->last_move_was_pass){
       $game->set_status_scoring;
       $event->{status_after} = 'scoring';
+      # nobody's turn during scoring.
+      # an empty string will do.
+      $event->{delta}{turn}{after} = '';
+      $initialize_scorable = 1;
    }
    $game->push_event($event);
    $game->update();
+
+   $self->initialize_scorable if $initialize_scorable;
+
    return;
 }
 sub attempt_resign{
@@ -347,6 +364,29 @@ sub attempt_resign{
    };
    $game->push_event($event);
    $game->update();
+}
+
+sub initialize_scorable {
+   my $self = shift;
+   my $game_id = $self->stash('game_id');
+   my $game = $self->model->game($game_id);
+   my $state = $game->state;
+   my $scorable = $state->scorable;
+   my $scorable_event = {
+      type => 'scorable',
+      scorable => {
+         dame => [$scorable->dame->nodes],
+         dead => {
+            w => [$scorable->dead('w')->nodes],
+            b => [$scorable->dead('b')->nodes],
+         },
+         terr => {
+            w => [$scorable->territory('w')->nodes],
+            b => [$scorable->territory('b')->nodes],
+         },
+      },
+   };
+   $self->model->pub_redis->publish("game_events:$game_id" => $json->encode($scorable_event));
 }
 
 # sub attempt_toggle_stone_state{
