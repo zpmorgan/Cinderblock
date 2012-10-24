@@ -150,19 +150,24 @@ Class('CinderblockGame', {
 
       changeAsstatus: function(newAsstatus){
          // active|scoring|finished
-         if(sc.newStatus == 'active'){
+         if(newAsstatus == 'active'){
             this.setStatusActive(); 
             this.actual_turn = re.turn_after;
          }
-         else if(sc.newStatus == 'scoring'){
+         else if(newAsstatus == 'scoring'){
             this.setStatusScoring(); 
             this.actual_turn = null;
          }
-         else if(sc.newStatus == 'finished'){
+         else if(newAsstatus == 'finished'){
             this.setStatusFinished(); 
             this.actual_turn = null;
             //this.onGameEnd(re); //cb
          }
+      },
+      setStatusFinished: function(){},
+      setStatusActive: function(){},
+      setStatusScoring: function(){
+      
       },
    
       // funky callback things.
