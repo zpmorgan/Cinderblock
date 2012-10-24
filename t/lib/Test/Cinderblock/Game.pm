@@ -1,12 +1,24 @@
 package Test::Cinderblock::Game;
+use 5.14.0;
 use Moose;
+use Mojo::JSON;
+my $json = Mojo::JSON->new;
+
+has test_cinderblock => (required => 1, is => 'ro', isa => 'Test::Cinderblock');
 
 has 'ua' => (
    is => 'ro',
    isa=>'Mojo::UserAgent',
-   default => sub{Test::Cinderblock->new('Cinderblock')->ua},
-# Mojo::UserAgent->new(ioloop => Mojo::IOLoop->new())},
-); # required=>1);
+   default => sub{
+      my $ua = $_[0]->test_cinderblock->ua;
+      #my $ua = Test::Cinderblock->new('Cinderblock')->ua;
+      $ua->cookie_jar ($_[0]->cookie_jar);
+      return $ua;
+   },
+   lazy => 1,
+);
+
+has 'cookie_jar' => (isa=>'Mojo::UserAgent::CookieJar',is => 'ro',required=>1);
 
 has 'id' => (isa=>'Int',is => 'ro',required=>1);
 
@@ -24,9 +36,14 @@ sub _opensock{
    $self->ua->websocket($self->ws_url => sub{
       my $ua = shift;
       $tx = shift;
+      #$tx->on(error => sub{die;});
+      $tx->on(finish => sub{
+            say @_;
+         });
       $tx->on(message => sub{
             my ($tx,$msg) = @_;
-            $self->{last_msg} = $msg;
+            push @{$self->{msg_q}}, $msg;
+            say $msg;
             $ua->ioloop->stop;
          });
       $ua->ioloop->stop;
@@ -38,8 +55,18 @@ sub _opensock{
 #return next message from game socket.
 sub block_sock{
    my $self = shift;
+   my $msg = shift @{$self->{msg_q}};
+   return $msg if $msg;
+
+   $self->sock;
    $self->ua->ioloop->start;
-   return $self->{last_msg};
+   $msg = shift @{$self->{msg_q}};
+   $msg;
+}
+sub decoded_block_sock{
+   my $self = shift;
+   my $msg = $self->block_sock;
+   return $json->decode($msg);
 }
 
 sub _get_page{
@@ -57,5 +84,15 @@ sub _find_ws_url{
    return 'TRY_SOME_SPOO';
 };
 
+
+sub do_move_attempt{
+   my ($self, $color,$node) = @_;
+   my $req = {
+      action=>'attempt_move',
+      move_attempt => {color => $color, node=>$node},
+   };
+   $self->sock->send( Mojo::JSON->encode($req) );
+   return $req;
+}
 
 1;

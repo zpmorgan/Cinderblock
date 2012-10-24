@@ -1,5 +1,6 @@
 package Test::Cinderblock;
 #use Moose;
+use 5.14.0;
 
 use parent 'Test::Mojo';
 
@@ -28,8 +29,10 @@ sub newgame{
    #my $websocket = $self->ua->websocket($ws_url
    my $game = Test::Cinderblock::Game->new(
 #      ua => $self->ua,
+      test_cinderblock => $self,
       id => $game_id,
       game_page_url => $redir_url,
+      cookie_jar => $self->ua->cookie_jar,
       #ws_url => $ws_url,
    );
    return $game;

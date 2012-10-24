@@ -52,8 +52,14 @@ my ($first_id, $second_id);
 {
    my $t = Test::Cinderblock->new('Cinderblock');
    my $game = $t->newgame(
-      h=>7, wrap_h=>1, wrap_v=>1, w=>10, play_against=>'invitation'
+      h=>7, wrap_h=>1, wrap_v=>1, w=>10, play_against=>'self'
    );
+   $game->game_page_content =~ /ident id (\d+)\b/;
+   my $idid = $1;
+   cmp_ok ($idid, '>',0 , 'some ident_id is found on the page.');
+   like ($game->game_page_content, qr/(anon-$idid)\b.*\1\b/s, 
+      'correct anon id is present twice.');
+   
    $second_id = $game->id;
    is($second_id, $first_id + 1,  'game ids seem to increment.');
    isa_ok($game, 'Test::Cinderblock::Game', 'newgame is a test::cinderblock::game');
