@@ -1,13 +1,17 @@
 use Mojo::Base -strict;
 
 use Test::More;
-use Test::Mojo;
+#use Test::Mojo;
+use FindBin '$Bin';
+use lib "$Bin/lib";
+use Test::Cinderblock;
 
 # start a game.
 # make some moves.
 
 {
-   my $t = Test::Mojo->new('Cinderblock');
+   #my $t = Test::Mojo->new('Cinderblock');
+   my $t = Test::Cinderblock->new('Cinderblock');
    #$t->get_ok('/')->status_is(200)->content_like(qr/Cinderblock/i);
 
    $t->get_ok('/new_game')->status_is(200)->content_like(qr/Sandbox/);

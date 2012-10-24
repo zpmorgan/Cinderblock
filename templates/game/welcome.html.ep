@@ -1,4 +1,4 @@
-% layout 'foo_layout',
+% layout 'foo_layout', title => 'Cinderblock';
 
 <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/1.7.0/moment.min.js" type="text/javascript"></script>
 <script src="/joose-mini.js" type="text/javascript"></script>

@@ -1,6 +1,6 @@
 
 % stash('do_jq_ui' => 1);
-% layout 'foo_layout';
+% layout 'foo_layout', title => 'Game '.stash('game_id');
 
 <style type="text/css">
    .ui-slider-horizontal .ui-state-default{

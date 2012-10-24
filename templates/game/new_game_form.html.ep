@@ -1,4 +1,4 @@
-% layout 'foo_layout',
+% layout 'foo_layout', title => 'New Game';
 <div class="wrapperblock ">
    <div class="middoform colors-light-on-dark">
       %= form_for '/new_game' => method => post =>  begin

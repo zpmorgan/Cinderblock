@@ -107,6 +107,8 @@ Class('CinderblockGame', {
       onNewGameEvent : function(delta){},
       onTotalMovesChange : function(new_count){},
       onGameEnd : function(e){},
+      //asstatus: active/scoring status (+/finished)
+      asstatus : {is: 'rw', init:"active"},
    },
    methods: {
       // TODO: numTurns?
@@ -146,10 +148,10 @@ Class('CinderblockGame', {
          this.onGameEnd(re); //cb
       },
 
-      handleStatusChange: function(sc){
+      changeAsstatus: function(newAsstatus){
          // active|scoring|finished
          if(sc.newStatus == 'active'){
-            this.setStatusScoring(); 
+            this.setStatusActive(); 
             this.actual_turn = re.turn_after;
          }
          else if(sc.newStatus == 'scoring'){
@@ -157,8 +159,8 @@ Class('CinderblockGame', {
             this.actual_turn = null;
          }
          else if(sc.newStatus == 'finished'){
-            this.setStatusScoring(); 
-            this.actual_turn = re.turn_after;
+            this.setStatusFinished(); 
+            this.actual_turn = null;
             //this.onGameEnd(re); //cb
          }
       },
@@ -193,11 +195,15 @@ Class('CinderblockGame', {
             else if(msg.type == 'resign'){
                game.handleResignEvent(msg);
             }
-            else if (msg.type == 'status_change'){
-               game.handleStatusChange(msg);
-            }
+            //else if (msg.type == 'status_change'){
+            //   game.handleStatusChange(msg);
+            //}
             else if (msg.type == 'ping'){
                game.sock.send(JSON.stringify({action:'pong'}));
+            }
+            if(msg.status_after){
+               game.log('setting asstatus: ' + msg.status_after);
+               game.changeAsstatus(msg.status_after);
             }
          };
          this.sock.onopen = function () {
@@ -418,6 +424,8 @@ Class ('CinderblockView', {
             // right mouse button == drag!
             // right or middle, resp.
             if(down_button == 3 || down_button == 2){
+               if(view.in_grab == true)
+                  return;
                e_down.preventDefault(); //no menu.
                //if(this.wrap_v || this.wrap_h){
                view.grabx = e_down.pageX;
