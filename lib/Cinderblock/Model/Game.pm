@@ -269,5 +269,15 @@ sub state{
    return $state;
 }
 
+sub move_hash{
+   my $self = shift;
+   my @events = @{$self->data->{game_events}};
+   while(@events){
+      my $lstmv = pop @events;
+      return $lstmv->{move_hash} if  $lstmv->{move_hash};
+   }
+   return undef
+}
+
 
 1;

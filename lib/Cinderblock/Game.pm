@@ -138,6 +138,11 @@ sub game_event_socket{
    for my $e(@$all_game_events){
       $ws->send($json->encode($e));
    }
+   if ($game->status eq 'scoring'){
+      $ws->send( $json->encode( 
+            $self->model->stordscor($game_id)->generate_a_scorable_event()
+         ));
+   }
    
    $self->on(message => sub {
          my ($ws, $msg) = @_;
@@ -153,8 +158,8 @@ sub game_event_socket{
          elsif($action eq 'attempt_resign'){
             $self->attempt_resign($msg_data);
          }
-         elsif($action eq 'attempt_toggle'){
-            $self->attempt_toggle_stone_state($msg_data);
+         elsif($action eq 'attempt_transanimate'){
+            $self->attempt_transanimate($msg_data);
          }
          elsif($action eq 'ping'){
             $ws->send('{"event_type":"pong"}');
@@ -192,6 +197,9 @@ my %denial_reasons = (
    3 => 'You do not have that color/game role. it is not yours.',
    4 => 'Move invalid..',
    5 => 'KO Collision.',
+   6 => 'game not scoring.',
+   7 => 'transanimation operation on an incorrect scorable.',
+   88 => 'unimplemented something.',
 );
 sub crap_out{
    my ($self,$msg) = @_;
@@ -346,6 +354,7 @@ sub attempt_resign{
    my $color = $msg->{resign_attempt}{color};
    # return unless $color eq $turn;
    #my $roles = $game->roles;
+   return $self->crap_out(88) unless $color;
    my $relevant_ident = $self->model->game_role_ident($game_id, $color) // {};
    return unless (defined $relevant_ident);
    return unless ($relevant_ident->{id} == $self->ident->{id});
@@ -366,12 +375,16 @@ sub attempt_resign{
    $game->update();
 }
 
-sub initialize_scorable {
+sub send_scorable {
    my $self = shift;
    my $game_id = $self->stash('game_id');
-   my $game = $self->model->game($game_id);
-   my $state = $game->state;
-   my $scorable = $state->scorable;
+   #my $game = $self->model->game($game_id);
+   my $stordscor = $self->model->stordscor($game_id);
+   $stordscor->publish();
+   return;
+   #my $state = $game->state;
+   #my $scorable = $state->scorable;
+   my $scorable;
    my $scorable_event = {
       type => 'scorable',
       scorable => {
@@ -390,12 +403,41 @@ sub initialize_scorable {
 }
 
 # sub attempt_toggle_stone_state{
-sub scoring_operation{
+sub attempt_transanimate{
    my ($self,$msg) = @_;
    my $game_id = $self->stash('game_id');
    my $game = $self->model->game($game_id);
-   return unless $game->status eq 'scoring';
-   return unless $game->roles_of_ident_id ($self->ident->{id});
+   return $self->crap_out(6) unless $game->status eq 'scoring';
+   #return $self->crap_out(1) unless $color eq $turn;
+
+   my $parent_scorable_id = $msg->{parent_scorable_id};
+   my $scorkey = "scorable:$game_id";
+   $self->model->block_redis->watch($scorkey);
+   my $scorable_representation = $self->model->redis_block(GET => $scorkey);
+   $scorable_representation = $json->decode($scorable_representation);
+   unless ($scorable_representation->{id} == $parent_scorable_id){
+      return $self->crap_out(7);
+   }
+   # construct state & g::g::cb::scorable from what's in redis.
+   my $state = $game->state;
+
+   my $deads = $scorable_representation->{dead};
+   my $dead_ns = $state->rulemap->nodeset;
+   for my $known_deads (values %$deads){
+      my $ns = $state->rulemap->nodeset(@$known_deads);
+      $dead_ns = $dead_ns->union($ns);
+   }
+   my $scorable_object = $state->scorable;
+   $scorable_object->deanimate($dead_ns);
+   $scorable_object->transanimate($msg->{node});
+   
+   my $new_representation = {
+      dame => $scorable_object->dame,
+      terr => $scorable_object->territory,
+      dead => $scorable_object->dead,
+   };
+
+   my $nodes_to_kill_initially =
    # success! we are participating..
    my $op = $msg->{operation};
    my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve?

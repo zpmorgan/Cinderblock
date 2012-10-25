@@ -8,6 +8,7 @@ use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
 use Cinderblock::Model::Game;
+use Cinderblock::Model::StordScor;
 
 use Carp qw/confess/;
 use Carp::Always;
@@ -102,6 +103,12 @@ sub redis_block{
    return @results;
 };
 
+sub decoded_redis_block{
+   my $self = shift;
+   my $thing = $self->redis_block(@_);
+   $thing = $json->decode($thing) if $thing;
+   return $thing;
+}
 
 # get game.. 
 sub game{
@@ -111,6 +118,11 @@ sub game{
    $game = $json->decode($game);
    $game = Cinderblock::Model::Game->new(data => $game);
    return $game;
+}
+#same for the stordscor..
+sub stordscor{
+   my ($self,$game_id) = @_;
+   return Cinderblock::Model::StordScor->new(game_id => $game_id);
 }
 
 # invite: {game_id => $game_id, color => $other_color};
@@ -149,6 +161,12 @@ sub new_anon_ident{
    $self->redis_block(HSET => ident => $ident_id, $json->encode($ident));
    $self->redis_block(HSET => session_ident => $sessid, $ident_id);
    return $ident;
+}
+
+sub next_stordscor_id{
+   my $self = shift;
+   my $id = $self->redis_block(INCR => 'next_stordscor_id');
+   return $id
 }
 
 1;

@@ -3,6 +3,8 @@ use 5.14.0;
 use Moose;
 use Mojo::JSON;
 my $json = Mojo::JSON->new;
+use Test::More;
+use Data::Dumper;
 
 has test_cinderblock => (required => 1, is => 'ro', isa => 'Test::Cinderblock');
 
@@ -113,5 +115,43 @@ sub do_move_attempt{
    $self->sock->send( Mojo::JSON->encode($req) );
    return $req;
 }
+
+sub do_transanimate_attempt{
+   my ($self, $scorable_id, $node) = @_;
+   my $req = {
+      action=>'attempt_transanimate',
+      transanimate_attempt => {node => $node, on_scorable => $scorable_id},
+   };
+   $self->sock->send( Mojo::JSON->encode($req) );
+   return $req;
+}
+
+sub expect_scorable{
+   my $self = shift;
+   my %expect = @_;
+   my $differ = 0;
+   
+   my $scorable_msg = $self->decoded_block_sock;
+   my $scorable = $scorable->{scorable};
+
+   $differ++ unless
+      is_deeply($scorable->{dame}, $expect{dame}, 'expected dame');
+   $differ++ unless
+      is_deeply($scorable->{terr}{w}, $expect{terr}{w}, 'expected w terr');
+   $differ++ unless
+      is_deeply($scorable->{terr}{b}, $expect{terr}{b}, 'expected b terr');
+   $differ++ unless
+      is_deeply($scorable->{dead}{w}, $expect{dead}{w}, 'expected w dead');
+   $differ++ unless
+      is_deeply($scorable->{dead}{b}, $expect{dead}{b}, 'expected b dead');
+
+   if($differ){
+      diag('GOT' . Dumper($scorable));
+      diag('expected' . Dumper(\%expect));
+      $differ = 0;
+   }
+}
+
+
 
 1;

@@ -79,7 +79,27 @@ is($res[1]->{status_after}, 'scoring', 'scoring status_after in 2nd res.');
    cmp_node_lists(\@b_terr, \@expected_b_terr, 'initial b terr: all terr derived.');
    cmp_node_lists(\@w_terr, \@expected_w_terr, 'initial w terr: all terr derived.');
 }
-      
+{
+   $tgame->do_transanimate_attempt ([1,0]);
+   #my $scorable = $game->decoded_block_sock;
+   $tgame->expect_scorable(
+      dame => [[0,2],[0,3],[3,4],[3,5]],
+      terr => {
+         w => [ [4,1],[5,1],[5,5], [0,0],[2,0] ],
+         b => [],
+      },
+      dead => {
+         w => [],
+         b => [ [1,0],[2,1],[3,0] ],
+      },
+   );
+   my @expected_dame = ( [0,2],[0,3], [0,0],[3,4],[3,5] );
+   my @expected_w_terr = ( [4,1],[5,1],[5,5] );
+   my @expected_b_terr = ( [2,0] );
+   my @expected_b_dead = (  );
+   my @expected_w_dead = (  );
+
+}
       done_testing;
 
 
