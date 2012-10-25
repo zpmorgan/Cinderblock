@@ -375,7 +375,9 @@ sub attempt_resign{
    $game->update();
 }
 
-sub send_scorable {
+# This means that the 2nd pass has proceeded 
+# at the behest of whomever procured this very websocket
+sub initialize_scorable {
    my $self = shift;
    my $game_id = $self->stash('game_id');
    #my $game = $self->model->game($game_id);

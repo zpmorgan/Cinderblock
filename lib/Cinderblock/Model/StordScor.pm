@@ -129,7 +129,7 @@ sub _gen_and_store_new_data{
       },
    };
    $self->model->redis_block(SET => $self->redis_data_key => $json->encode($data));
-   die Dumper($data);
+   #die Dumper($data);
    return $data;
 }
 

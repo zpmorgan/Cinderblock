@@ -132,7 +132,7 @@ sub expect_scorable{
    my $differ = 0;
    
    my $scorable_msg = $self->decoded_block_sock;
-   my $scorable = $scorable->{scorable};
+   my $scorable = $scorable_msg->{scorable};
 
    $differ++ unless
       is_deeply($scorable->{dame}, $expect{dame}, 'expected dame');
