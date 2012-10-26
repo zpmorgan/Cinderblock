@@ -120,6 +120,7 @@ sub game{
    return $game;
 }
 #same for the stordscor..
+# arg: game id.
 sub stordscor{
    my ($self,$game_id) = @_;
    return Cinderblock::Model::StordScor->new(game_id => $game_id);
@@ -163,9 +164,9 @@ sub new_anon_ident{
    return $ident;
 }
 
-sub next_stordscor_id{
+sub next_stordscor_r_id{
    my $self = shift;
-   my $id = $self->redis_block(INCR => 'next_stordscor_id');
+   my $id = $self->redis_block(INCR => 'next_stordscor_r_id');
    return $id
 }
 

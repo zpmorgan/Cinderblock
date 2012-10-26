@@ -4,6 +4,7 @@ use Mojo::Base 'Mojolicious::Controller';
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 use Mojo::Redis;
+use Data::Dumper;
 
 use Games::Go::Cinderblock::Rulemap;
 use Games::Go::Cinderblock::Rulemap::Rect;
@@ -412,43 +413,56 @@ sub attempt_transanimate{
    return $self->crap_out(6) unless $game->status eq 'scoring';
    #return $self->crap_out(1) unless $color eq $turn;
 
-   my $parent_scorable_id = $msg->{parent_scorable_id};
-   my $scorkey = "scorable:$game_id";
-   $self->model->block_redis->watch($scorkey);
-   my $scorable_representation = $self->model->redis_block(GET => $scorkey);
-   $scorable_representation = $json->decode($scorable_representation);
-   unless ($scorable_representation->{id} == $parent_scorable_id){
+   my $attempt = $msg->{transanimate_attempt};
+   my $msg_parent_scorable_r_id = $attempt->{parent_scorable_r_id};
+   die 'no paremt scor id.' unless defined $msg_parent_scorable_r_id;
+
+   my $stordscor = $game->stordscor;
+   #my $scorable = $stordscor->scorable;
+   #$self->model->block_redis->watch($scorkey);
+   #my $scorable_representation = $self->model->redis_block(GET => $scorkey);
+   #$scorable_representation = $json->decode($scorable_representation);
+   #unless ($scorable_representation->{parent_scorable_id} == $parent_scorable_id){
+   unless ($msg_parent_scorable_r_id == $stordscor->r_id){
       return $self->crap_out(7);
    }
    # construct state & g::g::cb::scorable from what's in redis.
-   my $state = $game->state;
+   #my $state = $game->state;
 
-   my $deads = $scorable_representation->{dead};
-   my $dead_ns = $state->rulemap->nodeset;
-   for my $known_deads (values %$deads){
-      my $ns = $state->rulemap->nodeset(@$known_deads);
-      $dead_ns = $dead_ns->union($ns);
-   }
-   my $scorable_object = $state->scorable;
-   $scorable_object->deanimate($dead_ns);
-   $scorable_object->transanimate($msg->{node});
-   
+   #my $deads = $scorable->dead;
+   #my $dead_ns = $state->rulemap->nodeset;
+   #for my $known_deads (values %$deads){
+   #   my $ns = $state->rulemap->nodeset(@$known_deads);
+   #   $dead_ns = $dead_ns->union($ns);
+   #}
+   #my $scorable_object = $state->scorable;
+   #$scorable_object->deanimate($dead_ns);
+   $stordscor->transanimate($attempt->{node});
+   $stordscor->update_and_publish;
+   return;
+}
+
+=comment 
+
+   $stordscor->update;
    my $new_representation = {
       dame => $scorable_object->dame,
       terr => $scorable_object->territory,
       dead => $scorable_object->dead,
    };
 
-   my $nodes_to_kill_initially =
+   my $nodes_to_kill_initially =3; #what?
    # success! we are participating..
    my $op = $msg->{operation};
    my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve?
    my $node = $op->{node};
    #somehow atomic & timestamped.
-   my $op_result = $game->atomic_score_op($op);
+   my $op_result = $game->atomic_score_op($op); # huh?
    #if ($op_result){
       # model publishes the operation results if any..
    #}
 }
+
+=cut
 
 1;

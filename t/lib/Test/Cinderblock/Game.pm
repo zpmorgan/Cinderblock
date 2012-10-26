@@ -117,10 +117,12 @@ sub do_move_attempt{
 }
 
 sub do_transanimate_attempt{
-   my ($self, $scorable_id, $node) = @_;
+   my ($self, $scorable_r_id, $node) = @_;
    my $req = {
       action=>'attempt_transanimate',
-      transanimate_attempt => {node => $node, on_scorable => $scorable_id},
+      transanimate_attempt => {
+         node => $node,
+         parent_scorable_r_id => $scorable_r_id},
    };
    $self->sock->send( Mojo::JSON->encode($req) );
    return $req;

@@ -200,11 +200,13 @@ sub last_move_was_pass{
    return 0 if $self->data->{game_events}->[-1]->{type} ne 'pass';
    return 1;
 }
+
+#This is stupid:
 # each game in scoring mode has a 'scorable', which is a description
 # of the current state of scoring negotiations.
 # ->{approval} is hashref: color => (color approves)?; 
 # ->{dead_chains}, arrayref of chain descriptions
-sub atomic_score_op{
+sub FOO_atomic_score_op{
    my ($self,$op) = @_;
    my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve? exit_scoring?
    my $scorable_key = "scorable:" . $self->id;
@@ -279,5 +281,9 @@ sub move_hash{
    return undef
 }
 
+sub stordscor{
+   my $self = shift;
+   return $self->model->stordscor($self->id);
+}
 
 1;

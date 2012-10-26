@@ -11,15 +11,8 @@ use Data::Dumper;
 
 has data => (
    isa => 'HashRef',
-   is => 'ro',
+   is => 'rw',
    builder => '_get_data',
-   lazy => 1,
-);
-
-has id => (
-   isa => 'Int',
-   is => 'ro',
-   builder => '_find_id',
    lazy => 1,
 );
 
@@ -82,15 +75,20 @@ sub _game_id_from_game{
    return $self->game->id;
 }
 
-sub _find_id{
+sub r_id{
    my $self = shift;
-   return $self->data->{id} // 0
+   return $self->data->{r_id} // 0
 }
 
 sub redis_data_key{
    my $self = shift;
    return "scorable:" . $self->game_id;
 }
+sub redis_game_event_channel{
+   my $self = shift;
+   return "game_events: " . $self->game_id;
+}
+
 # here we clamp with a WATCH
 sub _get_data{
    my $self = shift;
@@ -109,15 +107,11 @@ sub _get_data{
    return $ss;
 }
 
-sub _gen_and_store_new_data{
-   my $self = shift;
-   my $game_id = $self->game_id;
-   my $game = $self->game;
-   my $state = $game->state;
-   my $scorable = $state->scorable;
+sub _data_from_some_scorable{
+   my ($self,$scorable) = @_;
    my $data = {
-      id => $self->model->next_stordscor_id,
-      move_hash => $game->move_hash,
+      id => $self->model->next_stordscor_r_id,
+      move_hash => $self->game->move_hash,
       dame => [$scorable->dame->nodes],
       dead => {
          w => [$scorable->dead('w')->nodes],
@@ -128,6 +122,16 @@ sub _gen_and_store_new_data{
          b => [$scorable->territory('b')->nodes],
       },
    };
+   return $data;
+}
+
+sub _gen_and_store_new_data{
+   my $self = shift;
+   my $game_id = $self->game_id;
+   my $game = $self->game;
+   my $state = $game->state;
+   my $scorable = $state->scorable;
+   my $data = $self->_data_from_some_scorable($scorable);
    $self->model->redis_block(SET => $self->redis_data_key => $json->encode($data));
    #die Dumper($data);
    return $data;
@@ -137,7 +141,7 @@ sub publish{
    my $self = shift;
    my $scorable_event = $self->generate_a_scorable_event;
    $self->model->pub_redis->publish(
-      "game_events: " . $self->game_id => 
+      $self->redis_game_event_channel,
       $json->encode($scorable_event)
    );
 }
@@ -146,13 +150,47 @@ sub generate_a_scorable_event{
    my $scorable_event = {
       type => 'scorable',
       scorable => {
-         id => $self->id,
+         r_id => $self->r_id,
          dame => $self->data->{dame},
          dead => $self->data->{dead},
          terr => $self->data->{terr},
       },
    };
    return $scorable_event;
+}
+
+# terr seems to include deads. it should be independent...
+
+sub transanimate{
+   my ($self,$node) = @_;
+   $self->scorable->transanimate($node);
+}
+sub update_and_publish{
+   my ($self) = @_;
+   # key in redis is watched already.
+   # multi, set, & exec. only update on success.
+   my $new_data = $self->_data_from_some_scorable($self->scorable);
+   my @res = $self->model->redis_block(
+      ['MULTI'], # 'OK'
+      [SET => $self->redis_data_key => $json->encode($new_data)],
+      ['EXEC'],
+   );
+   my $exec_res = $res[2];
+   # $exec_res isa arrayref or undef.
+   if($exec_res){ 
+      $self->data($new_data);
+      my $scorable_event = $self->generate_a_scorable_event;
+      $self->model->pub_redis->publish(
+         $self->redis_game_event_channel,
+         $json->encode($scorable_event)
+      );
+   }
+}
+
+# stop watching stordscor like some sort of creeper.
+sub DESTROY{
+   my $self = shift;
+   $self->model->block_redis->unwatch;
 }
 
 # sub attempt_toggle_stone_state{

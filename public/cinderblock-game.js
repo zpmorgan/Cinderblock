@@ -108,6 +108,7 @@ Class('CinderblockGame', {
       onTotalMovesChange : function(new_count){},
       onGameEnd : function(e){},
       //asstatus: active/scoring status (+/finished)
+      latestScorable: {is: 'rw' }, //init:"active"},
       asstatus : {is: 'rw', init:"active"},
    },
    methods: {
@@ -147,6 +148,10 @@ Class('CinderblockGame', {
          this.onTotalGameEventsChange (this.game_events.length);
          this.onGameEnd(re); //cb
       },
+      handleScorableMessage: function(msg){
+         this.log('received scorable. sdfhuka');
+         this.setLatestScorable(msg.scorable);
+      },
 
       changeAsstatus: function(newAsstatus){
          // active|scoring|finished
@@ -164,10 +169,14 @@ Class('CinderblockGame', {
             //this.onGameEnd(re); //cb
          }
       },
-      setStatusFinished: function(){},
-      setStatusActive: function(){},
-      setStatusScoring: function(){
+      setStatusFinished: function(){
+         this.setAsstatus('finished');
+      },
+      setStatusActive: function(){
       
+      },
+      setStatusScoring: function(){
+         this.setAsstatus('scoring');
       },
    
       // funky callback things.
@@ -199,6 +208,9 @@ Class('CinderblockGame', {
             }
             else if(msg.type == 'resign'){
                game.handleResignEvent(msg);
+            }
+            else if(msg.type == 'scorable'){
+               game.handleScorableMessage(msg);
             }
             //else if (msg.type == 'status_change'){
             //   game.handleStatusChange(msg);
@@ -255,10 +267,12 @@ Class('CinderblockGame', {
          };
          this.sock.send(JSON.stringify(attempt));
       },
-      attemptToggle : function(node){
+      attemptTransanimate: function(node){
+         this.log('ATTEMPTing TransAnimation');
          var attempt = {
-            action: 'attempt_toggle',
-            resign_attempt: {
+            action: 'attempt_transanimate',
+            transanimate_attempt: {
+               parent_scorable_r_id : this.getLatestScorable().r_id,
                "node" : node,
             }
          };
@@ -414,15 +428,21 @@ Class ('CinderblockView', {
             if(down_button == 1){
                if(view.in_grab == true)
                   return;
+               if(view.game.getAsstatus() == 'finished')
+                  return;
                var point = mouseEventToRelative(e_down);
                var boardnode = view.canvasXYToNode(point[0],point[1]);
                if(!boardnode){ return;}
-               if(view.can_move()) {
-                  view.game.attemptMove(boardnode);
+               if(view.game.getAsstatus() == 'active'){
+                  if(view.can_move()) {
+                     view.game.attemptMove(boardnode);
+                  }
                   return;
                }
-               if(view.can_toggle_chain_state()) {
-                  view.game.attemptToggle(boardnode);
+               if(view.game.getAsstatus() == 'scoring'){
+                  //if(view.can_toggle_chain_state()) {
+                     view.game.attemptTransanimate(boardnode);
+                  //}
                   return;
                }
             }
