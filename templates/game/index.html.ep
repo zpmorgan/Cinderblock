@@ -46,6 +46,16 @@
             wrap_v: PORTAL_DATA.game_wrap_v,
             wrap_h: PORTAL_DATA.game_wrap_h,
             });
+
+         // comfort emission.
+         relevantGame.on('blah', function(){
+            console.log('Emittable operating.');
+            });
+         relevantGame.on('blah', function(){
+            console.log('Emittable operating again.');
+            });
+         relevantGame.emit('blah');
+
          relevantView = relevantGame.setupViewOnCanvas($("canvas#goban")[0]);
          relevantView.draw();
    });

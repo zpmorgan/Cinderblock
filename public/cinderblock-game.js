@@ -82,8 +82,31 @@ Class( 'GridBoard', {
    },
 });
 
+Role("Emitter", {
+   has : {
+      callbacks : {
+         is : rw,
+         init : {blargles : [function(){}]}
+      },
+   },
+   methods : {
+      on: function(signal, cb){
+         if(this.callbacks[signal] == null){
+            this.callbacks[signal] = [];
+         }
+         this.callbacks[signal].push(cb);
+      },
+      emit : function(signal){
+         if(this.callbacks[signal] == null){ return }
+         $.each(this.callbacks[signal], function(){
+            this();
+         });
+      },
+   },
+})
 
 Class('CinderblockGame', {
+   does: [Emitter],
    has: {
      // empty_board_image_data: {is: 'rw'},
       // only stones: 
@@ -149,8 +172,9 @@ Class('CinderblockGame', {
          this.onGameEnd(re); //cb
       },
       handleScorableMessage: function(msg){
-         this.log('received scorable. sdfhuka');
+         this.log('received scorable. showing scorable?');
          this.setLatestScorable(msg.scorable);
+         this.emit('newScorable');
       },
 
       changeAsstatus: function(newAsstatus){
