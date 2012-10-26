@@ -86,7 +86,7 @@ sub redis_data_key{
 }
 sub redis_game_event_channel{
    my $self = shift;
-   return "game_events: " . $self->game_id;
+   return "game_events:" . $self->game_id;
 }
 
 # here we clamp with a WATCH
