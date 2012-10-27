@@ -31,6 +31,11 @@ has 'sock' => (is => 'ro',isa=>'Mojo::Transaction::WebSocket',lazy=>1,builder=>'
 has game_page_url => (isa => 'Str', is => 'ro', required => 1);
 has game_page_content => (isa => 'Str', is => 'ro', lazy => 1, builder => '_get_page');
 
+has last_r_id => ( # for scorable revisions.  $scorable_msg->{scorable}{r_id};
+   is => 'rw',
+   isa => 'Int'
+);
+
 sub _opensock{
    my $self = shift;
    # $self->ua->ioloop( Mojo::IOLoop->new() ); #block semi-independently?
@@ -122,7 +127,7 @@ sub do_transanimate_attempt{
       action=>'attempt_transanimate',
       transanimate_attempt => {
          node => $node,
-         parent_scorable_r_id => $scorable_r_id},
+         parent_scorable_r_id => $self->last_r_id},
    };
    $self->sock->send( Mojo::JSON->encode($req) );
    return $req;
@@ -137,6 +142,8 @@ sub expect_scorable{
    
    my $scorable_msg = $self->decoded_block_sock;
    my $scorable = $scorable_msg->{scorable};
+   ok($scorable->{r_id}, 'scorable has an r_id.');
+   $self->last_r_id($scorable->{r_id});
 
    $differ++ unless
       is_deeply($self->sort_nodes($scorable->{dame}), 
