@@ -110,7 +110,7 @@ sub _get_data{
 sub _data_from_some_scorable{
    my ($self,$scorable) = @_;
    my $data = {
-      id => $self->model->next_stordscor_r_id,
+      r_id => $self->model->next_stordscor_r_id,
       move_hash => $self->game->move_hash,
       dame => [$scorable->dame->nodes],
       dead => {

@@ -130,30 +130,52 @@ sub do_transanimate_attempt{
 
 sub expect_scorable{
    my $self = shift;
-   my %expect = @_;
+   my $expect = shift;
+   my %expect = %$expect;
+   my $test_name = shift // 'scorable_foo';
    my $differ = 0;
    
    my $scorable_msg = $self->decoded_block_sock;
    my $scorable = $scorable_msg->{scorable};
 
    $differ++ unless
-      is_deeply($scorable->{dame}, $expect{dame}, 'expected dame');
+      is_deeply($self->sort_nodes($scorable->{dame}), 
+                $self->sort_nodes($expect{dame}), 
+                "$test_name: expected dame");
    $differ++ unless
-      is_deeply($scorable->{terr}{w}, $expect{terr}{w}, 'expected w terr');
+      is_deeply($self->sort_nodes($scorable->{terr}{w}), 
+                $self->sort_nodes($expect{terr}{w}), 
+                "$test_name: expected w terr");
    $differ++ unless
-      is_deeply($scorable->{terr}{b}, $expect{terr}{b}, 'expected b terr');
+      is_deeply($self->sort_nodes($scorable->{terr}{b}), 
+                $self->sort_nodes($expect{terr}{b}), 
+                "$test_name: expected b terr");
    $differ++ unless
-      is_deeply($scorable->{dead}{w}, $expect{dead}{w}, 'expected w dead');
+      is_deeply($self->sort_nodes($scorable->{dead}{w}), 
+                $self->sort_nodes($expect{dead}{w}), 
+                "$test_name: expected w dead");
    $differ++ unless
-      is_deeply($scorable->{dead}{b}, $expect{dead}{b}, 'expected b dead');
+      is_deeply($self->sort_nodes($scorable->{dead}{b}), 
+                $self->sort_nodes($expect{dead}{b}), 
+                "$test_name: expected b dead");
 
    if($differ){
+      diag(" $test_name fidders: ");
       diag('GOT' . Dumper($scorable));
       diag('expected' . Dumper(\%expect));
       $differ = 0;
    }
 }
 
+# expect arrayref. return arrayref.
+sub sort_nodes{
+   my ($self,$nodes) = @_;
+   my @nodes = sort { 
+      $a->[0] <=> $b->[0] || # the result is -1,0,1 ...
+      $a->[1] <=> $b->[1]    # so [1] when [0] is same
+   } @$nodes;
+   return \@nodes
+}
 
 
 1;

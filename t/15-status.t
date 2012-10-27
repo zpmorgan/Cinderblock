@@ -5,6 +5,7 @@ use Test::Mojo;
 use FindBin '$Bin';
 use lib "$Bin/lib";
 use Test::Cinderblock;
+use Data::Dumper;
 
 my $t = Test::Cinderblock->new('Cinderblock');
 my $app = $t->app;
@@ -41,8 +42,13 @@ is_deeply($res[1]->{delta}, {turn=>{before=>'w',after=>''}},
    'doublepass delta: no turn after.');
 is($res[0]->{status_after}, undef, 'no status_after in 1st res.');
 is($res[1]->{status_after}, 'scoring', 'scoring status_after in 2nd res.');
+
+my $last_r_id;
 {
    my $scorable_msg = $tgame->decoded_block_sock;
+   $last_r_id = $scorable_msg->{scorable}{r_id};
+   ok($last_r_id, 'scorable has an r_id');
+
    my @expected_dame = ( [0,2],[0,3], [0,0],[3,4],[3,5] );
    my @expected_w_terr = ( [4,1],[5,1],[5,5] );
    my @expected_b_terr = ( [2,0] );
@@ -73,25 +79,28 @@ is($res[1]->{status_after}, 'scoring', 'scoring status_after in 2nd res.');
       );
    }
 
-   cmp_node_lists(\@dame, \@expected_dame, 'initial dame: all stones alive.');
+   cmp_node_lists(\@dame, \@expected_dame, 'initial dame: all stones alive. askjeeves');
    cmp_node_lists(\@b_dead, \@expected_b_dead, 'initial b dead: all stones alive.');
    cmp_node_lists(\@w_dead, \@expected_w_dead, 'initial w dead: all stones alive.');
    cmp_node_lists(\@b_terr, \@expected_b_terr, 'initial b terr: all terr derived.');
    cmp_node_lists(\@w_terr, \@expected_w_terr, 'initial w terr: all terr derived.');
 }
 {
-   $tgame->do_transanimate_attempt ([1,0]);
+   $tgame->do_transanimate_attempt ($last_r_id, [1,0]);
    #my $scorable = $game->decoded_block_sock;
    $tgame->expect_scorable(
-      dame => [[0,2],[0,3],[3,4],[3,5]],
-      terr => {
-         w => [ [4,1],[5,1],[5,5], [0,0],[2,0] ],
-         b => [],
+      {
+         dame => [[0,2],[0,3],[3,4],[3,5]],
+         terr => {
+            w => [ [4,1],[5,1],[5,5], [0,0],[2,0] ],
+            b => [],
+         },
+         dead => {
+            w => [],
+            b => [ [1,0],[2,1],[3,0] ],
+         },
       },
-      dead => {
-         w => [],
-         b => [ [1,0],[2,1],[3,0] ],
-      },
+      'scores after transanimate.',
    );
    my @expected_dame = ( [0,2],[0,3], [0,0],[3,4],[3,5] );
    my @expected_w_terr = ( [4,1],[5,1],[5,5] );

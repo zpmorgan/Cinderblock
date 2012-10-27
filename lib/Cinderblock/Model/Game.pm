@@ -278,6 +278,7 @@ sub move_hash{
       my $lstmv = pop @events;
       return $lstmv->{move_hash} if  $lstmv->{move_hash};
    }
+   return 0;
    return undef
 }
 
