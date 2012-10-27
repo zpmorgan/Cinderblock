@@ -104,7 +104,8 @@
             });
       });
    $(document).ready(function(){
-      relevantGame.setOnGameEnd(function(end_event){
+      //relevantGame.setOnGameEnd(function(end_event){
+      relevantGame.on('game_end', function(){
          var result_div = $('<div class="left-panel-controls" />');
          result_div.text(end_event.winner.toUpperCase() + '+Resign');
          result_div.css('font-weight', 'bold');

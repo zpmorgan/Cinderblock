@@ -34,6 +34,10 @@ function mouseEventToRelative(e) {
     return [x,y];
 };
 
+/*
+ * Signals:
+ * virtual_move_change
+ */
 
 Class( 'GridBoard', {
    has: {
@@ -106,6 +110,12 @@ Role("Emitter", {
       },
    },
 })
+/* 
+ * signals:
+ * scorable_change
+ * game_end
+ * new_game_event
+ */
 
 Class('CinderblockGame', {
    does: [Emitter],
@@ -129,9 +139,9 @@ Class('CinderblockGame', {
          init:function () { return new GridBoard({w: this.w, h: this.h}) },
       },
       actual_turn : {is:'rw',init:'b'},
-      onNewGameEvent : function(delta){},
+      //onNewGameEvent : function(delta){},
       onTotalMovesChange : function(new_count){},
-      onGameEnd : function(e){},
+      //onGameEnd : function(e){},
       //asstatus: active/scoring status (+/finished)
       latestScorable: {is: 'rw' }, //init:"active"},
       asstatus : {is: 'rw', init:"active"},
@@ -157,7 +167,8 @@ Class('CinderblockGame', {
          this.game_events.push(move_event);
          this.getActual_board().applyBoardDelta(move_event.delta.board);
          this.actual_turn = move_event.delta.turn.after;
-         this.onNewGameEvent(move_event); //cb
+         //this.onNewGameEvent(move_event); //cb
+         this.emit('new_game_event');
          this.onTotalGameEventsChange (this.game_events.length);
       },
       handlePassEvent : function(pe){
@@ -166,15 +177,16 @@ Class('CinderblockGame', {
          if(delta && delta.turn){
             this.actual_turn = delta.turn.after;
          }
-         this.onNewGameEvent(pe); //cb
+         this.emit('new_game_event');
          this.onTotalGameEventsChange (this.game_events.length);
       },
       handleResignEvent : function(re){
          this.game_events.push(re);
          this.actual_turn = re.turn_after;
-         this.onNewGameEvent(re); //cb
+         this.emit('new_game_event');
          this.onTotalGameEventsChange (this.game_events.length);
          this.onGameEnd(re); //cb
+         this.emit('game_end');
       },
       handleScorableMessage: function(msg){
          this.log('received scorable. showing scorable?');
@@ -209,10 +221,7 @@ Class('CinderblockGame', {
       },
    
       // funky callback things.
-      setOnGameEnd : function(cb){
-         this.onGameEnd = cb;
-      },
-      setOnNewGameEvent : function(cb){
+      FOO_setOnNewGameEvent : function(cb){
          this.onNewGameEvent = cb;
       },
       setOnTotalGameEventsChange : function(cb){
@@ -547,7 +556,7 @@ Class ('CinderblockView', {
             view.redrawFinalWithOffset();
          });
 
-         this.game.setOnNewGameEvent(function(move_data){
+         this.game.on('new_game_event', function(){ //setOnNewGameEvent(function(move_data){
             if(view.virtualMoveNum == view.game.game_events.length-1){ 
                view.virtuallyGoToEnd();
             }
