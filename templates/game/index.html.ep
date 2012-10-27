@@ -71,21 +71,21 @@
          });
          // move slider when time travelling.
          relevantView.on('virtual_move_change', function(){
-            //relevantView.setOnVirtualMoveChange(function(move_num){
             var move_num = this.getVirtualMoveNum();
             $('#time-slider').slider("option", "value", move_num);
             $("#time-machine-move-num").text(move_num);
             $(".ui-slider-horizontal .ui-state-default").css(
                'background-image', move_num % 2 ? 'url(/b.png)' : 'url(/w.png)');
-            });
-         relevantGame.setOnTotalGameEventsChange(function(total_moves){
+         });
+         relevantGame.on('new_game_event', function(){
+            var total_moves = relevantGame.game_events.length;
             //$('#time-slider').slider("option", "value", move_num);
             $("#time-machine-total-moves").text(total_moves);
             $('#time-slider').slider("option", "max", total_moves);
             if(relevantGame.timeSinceInitializedInMs() >= 1000){
                relevantView.playMoveSound();
             }
-            });
+         });
          relevantView.setOnCapturesChange(function(color, new_num){
                var caps_elem = $('span.captures-'+color);
                caps_elem.text(new_num);
@@ -104,7 +104,6 @@
             });
       });
    $(document).ready(function(){
-      //relevantGame.setOnGameEnd(function(end_event){
       relevantGame.on('game_end', function(){
          var result_div = $('<div class="left-panel-controls" />');
          result_div.text(end_event.winner.toUpperCase() + '+Resign');

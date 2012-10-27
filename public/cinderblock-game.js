@@ -169,7 +169,6 @@ Class('CinderblockGame', {
          this.actual_turn = move_event.delta.turn.after;
          //this.onNewGameEvent(move_event); //cb
          this.emit('new_game_event');
-         this.onTotalGameEventsChange (this.game_events.length);
       },
       handlePassEvent : function(pe){
          this.game_events.push(pe);
@@ -178,13 +177,11 @@ Class('CinderblockGame', {
             this.actual_turn = delta.turn.after;
          }
          this.emit('new_game_event');
-         this.onTotalGameEventsChange (this.game_events.length);
       },
       handleResignEvent : function(re){
          this.game_events.push(re);
          this.actual_turn = re.turn_after;
          this.emit('new_game_event');
-         this.onTotalGameEventsChange (this.game_events.length);
          this.onGameEnd(re); //cb
          this.emit('game_end');
       },
@@ -220,14 +217,7 @@ Class('CinderblockGame', {
          this.setAsstatus('scoring');
       },
    
-      // funky callback things.
-      FOO_setOnNewGameEvent : function(cb){
-         this.onNewGameEvent = cb;
-      },
-      setOnTotalGameEventsChange : function(cb){
-         this.onTotalGameEventsChange = cb;
-      },
-
+      // no more funky callback things.
 
       openSocket : function(){
          var game = this;
@@ -556,7 +546,7 @@ Class ('CinderblockView', {
             view.redrawFinalWithOffset();
          });
 
-         this.game.on('new_game_event', function(){ //setOnNewGameEvent(function(move_data){
+         this.game.on('new_game_event', function(){ 
             if(view.virtualMoveNum == view.game.game_events.length-1){ 
                view.virtuallyGoToEnd();
             }
@@ -942,9 +932,6 @@ Class ('CinderblockView', {
          this.game.openSocket();
          this.loadMoveSound();
       },
-      //setOnVirtualMoveChange : function(cb){
-      //   this.onVirtualMoveChange = cb;
-      //}, signal now.
       setOnCapturesChange: function(cb){
          this.onCapturesChange = cb;
       },
