@@ -91,10 +91,12 @@ Role("Emitter", {
    },
    methods : {
       on: function(signal, cb){
+         var emitter = this;
          if(this.callbacks[signal] == null){
             this.callbacks[signal] = [];
          }
-         this.callbacks[signal].push(cb);
+         this.callbacks[signal].push(
+            $.proxy (cb, emitter));
       },
       emit : function(signal){
          if(this.callbacks[signal] == null){ return }
@@ -316,6 +318,7 @@ Class('CinderblockGame', {
 
 
 Class ('CinderblockView', {
+   does: [Emitter],
    has: {
       game: {
          isa: function () { return m.CinderblockGame} , 
@@ -337,7 +340,7 @@ Class ('CinderblockView', {
       },
       virtualCaptures: {is:'ro',init: {w:0,b:0}},
       canvasFinagled : {is:'rw', required:false},
-      onVirtualMoveChange : function(move_num){},
+      //onVirtualMoveChange : function(move_num){},
       onCapturesChange : function(color, new_val){},
       state : {is : 'rw', init : 'void'},
    },
@@ -930,9 +933,9 @@ Class ('CinderblockView', {
          this.game.openSocket();
          this.loadMoveSound();
       },
-      setOnVirtualMoveChange : function(cb){
-         this.onVirtualMoveChange = cb;
-      },
+      //setOnVirtualMoveChange : function(cb){
+      //   this.onVirtualMoveChange = cb;
+      //}, signal now.
       setOnCapturesChange: function(cb){
          this.onCapturesChange = cb;
       },
@@ -991,7 +994,8 @@ Class ('CinderblockView', {
                //this.log (this.virtualMoveNum+1);
                //this.log (this.virtualMoveNum);
             }
-            this.onVirtualMoveChange(this.virtualMoveNum);
+            //this.onVirtualMoveChange(this.virtualMoveNum);
+            this.emit('virtual_move_change');
             this.decorate();
             return;
          }
@@ -1029,7 +1033,8 @@ Class ('CinderblockView', {
 
                this.virtualMoveNum--;
             }
-            this.onVirtualMoveChange(this.virtualMoveNum);
+            //this.onVirtualMoveChange(this.virtualMoveNum);
+            this.emit('virtual_move_change');
             this.decorate();
             return;
          }

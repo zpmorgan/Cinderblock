@@ -70,7 +70,9 @@
             //relevantGame.log(slider_val);
          });
          // move slider when time travelling.
-         relevantView.setOnVirtualMoveChange(function(move_num){
+         relevantView.on('virtual_move_change', function(){
+            //relevantView.setOnVirtualMoveChange(function(move_num){
+            var move_num = this.getVirtualMoveNum();
             $('#time-slider').slider("option", "value", move_num);
             $("#time-machine-move-num").text(move_num);
             $(".ui-slider-horizontal .ui-state-default").css(
