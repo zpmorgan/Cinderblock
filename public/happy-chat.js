@@ -5,16 +5,12 @@ Class('HappyChat', {
       elem: {is:'ro', required:true},
       messages_elem: {is:'ro', required: true},
       txtfield_elem: {is:'ro', lazy: false, init: _build_input_field},
-      onMsgRequest : {is:'rw'}, //,init:function(){}},
    },
    methods:{
       displayMessage: function(happy_msg_event){
-         //_messages_elem.append(msg.text);
          var happy_raw_text = happy_msg_event.text;
          var happy_epoch_ms = happy_msg_event.time_ms;
          var happy_speaker = happy_msg_event.speaker;
-         // event: {text, speaker, time_ms};
-         // var msgbox = this.messages_elem;
          var msgdiv = $('<div class="happy-message" />');
 
          var msg_text_div = $('<div class="happy-submessage-body" />');
@@ -86,7 +82,6 @@ Class('HappyChat', {
    },
    after: {
       initialize: function(){
-         this.setOnMsgRequest(function(){});
          this.openSocket();
          var audio = $("<audio src='/43683__stijn__click6b.ogg' id='move-sound' />");
          $('body').append(audio);

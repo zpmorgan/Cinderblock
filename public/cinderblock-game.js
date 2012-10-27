@@ -102,10 +102,13 @@ Role("Emitter", {
          this.callbacks[signal].push(
             $.proxy (cb, emitter));
       },
-      emit : function(signal){
+      emit : function(signal, args){
          if(this.callbacks[signal] == null){ return }
          $.each(this.callbacks[signal], function(){
-            this();
+            if(args)
+               this.apply('fakescope', args)
+            else
+               this();
          });
       },
    },
@@ -182,8 +185,7 @@ Class('CinderblockGame', {
          this.game_events.push(re);
          this.actual_turn = re.turn_after;
          this.emit('new_game_event');
-         this.onGameEnd(re); //cb
-         this.emit('game_end');
+         this.emit('game_end', [re]);
       },
       handleScorableMessage: function(msg){
          this.log('received scorable. showing scorable?');
@@ -204,7 +206,6 @@ Class('CinderblockGame', {
          else if(newAsstatus == 'finished'){
             this.setStatusFinished(); 
             this.actual_turn = null;
-            //this.onGameEnd(re); //cb
          }
       },
       setStatusFinished: function(){
@@ -340,7 +341,7 @@ Class ('CinderblockView', {
       virtualCaptures: {is:'ro',init: {w:0,b:0}},
       canvasFinagled : {is:'rw', required:false},
       //onVirtualMoveChange : function(move_num){},
-      onCapturesChange : function(color, new_val){},
+      //onCapturesChange : function(color, new_val){},
       state : {is : 'rw', init : 'void'},
    },
    methods: {
@@ -932,9 +933,6 @@ Class ('CinderblockView', {
          this.game.openSocket();
          this.loadMoveSound();
       },
-      setOnCapturesChange: function(cb){
-         this.onCapturesChange = cb;
-      },
 
       // either show deads/territory or mark the current move...
       decorate: function(){
@@ -983,7 +981,8 @@ Class ('CinderblockView', {
                if(delta.captures != null){
                   $.each(delta.captures, function(color,delt){
                      view.virtualCaptures[color] = delt.after;
-                     view.onCapturesChange(color, delt.after);
+                     //view.onCapturesChange(color, delt.after);
+                     view.emit('captures_change', [color, delt.after]);
                   });
                }
                this.virtualMoveNum++;
@@ -1018,7 +1017,8 @@ Class ('CinderblockView', {
                if(delta.captures  != null){
                   $.each(delta.captures, function(color,delt){
                      view.virtualCaptures[color] = delt.before;
-                     view.onCapturesChange(color, delt.before);
+                     //view.onCapturesChange(color, delt.before);
+                     view.emit('captures_change', [color, delt.before]);
                   });
                }
 

@@ -86,7 +86,7 @@
                relevantView.playMoveSound();
             }
          });
-         relevantView.setOnCapturesChange(function(color, new_num){
+         relevantView.on('captures_change', function(color, new_num){
                var caps_elem = $('span.captures-'+color);
                caps_elem.text(new_num);
                });
@@ -104,7 +104,7 @@
             });
       });
    $(document).ready(function(){
-      relevantGame.on('game_end', function(){
+      relevantGame.on('game_end', function(end_event){
          var result_div = $('<div class="left-panel-controls" />');
          result_div.text(end_event.winner.toUpperCase() + '+Resign');
          result_div.css('font-weight', 'bold');
