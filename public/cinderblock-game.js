@@ -145,6 +145,9 @@ Class('CinderblockGame', {
             game: this,
          });
          view.finagleCanvas(cnvs);
+         this.on('scorable_change', function(){
+            view.handleScorableChange();
+         });
          return view;
       },
 
@@ -174,7 +177,7 @@ Class('CinderblockGame', {
       handleScorableMessage: function(msg){
          this.log('received scorable. showing scorable?');
          this.setLatestScorable(msg.scorable);
-         this.emit('newScorable');
+         this.emit('scorable_change') ;
       },
 
       changeAsstatus: function(newAsstatus){
@@ -327,6 +330,11 @@ Class ('CinderblockView', {
       // TODO:to 'view'
       //this.virtual_board = new GridBoard({w: this.game.w, h: this.game.h});
       virtualMoveNum: {is:'rw',init:0},
+      virtualBoard: {
+         is:'ro',
+         isa: function () { return m.GridBoard },
+         init:function () { return new GridBoard({w: this.game.w, h: this.game.h}) },
+      },
       virtualCaptures: {is:'ro',init: {w:0,b:0}},
       canvasFinagled : {is:'rw', required:false},
       onVirtualMoveChange : function(move_num){},
@@ -342,7 +350,7 @@ Class ('CinderblockView', {
       can_move : function(){
          if(PORTAL_DATA.role == 'watcher')
             return 0;
-         if(this.virtualMoveNum != this.game.game_events.length)
+         if(! this.viewIsCurrent()) //this.virtualMoveNum != this.game.game_events.length)
             return 0;
          var turn = this.game.actual_turn;
          var can_move = 0;
@@ -644,8 +652,9 @@ Class ('CinderblockView', {
          $('body').append(this.BAR_CONTAINER);
       },
 
-      applyBoardDeltaToCanvas : function(boardDelta){
+      applyBoardDelta : function(boardDelta){
          var view = this;
+         this.getVirtualBoard().applyBoardDelta(boardDelta);
          if(boardDelta.add != null){
             $.each(boardDelta.add, function(color,nodes){
                $.each(nodes, function(){
@@ -661,6 +670,15 @@ Class ('CinderblockView', {
                   view.clearNode(node);
                });
             });
+         }
+      },
+      resetNode : function(node){
+         var at_node = this.getVirtualBoard().getStoneAtNode(node);
+         if(at_node){
+            this.dropStone(at_node, node);
+         }
+         else {
+            this.clearNode(node);
          }
       },
       dropStone : function(stone, node){
@@ -731,7 +749,6 @@ Class ('CinderblockView', {
                   0,0,cwidth,cheight, //src
                   wrapping_offsets[i][0], wrapping_offsets[i][1], cwidth,cheight); //dest
          }
-
       },
 
       eraseLastMoveMark: function(){
@@ -771,6 +788,35 @@ Class ('CinderblockView', {
          ctx.closePath();
          ctx.stroke();
          ctx.restore();
+         this.redrawNodeOnFinal(node_to_mark);
+      },
+      putBoxOnNode : function(node_to_mark, style){
+         var point = this.nodeToPoint(node_to_mark);
+         var x = point[0];
+         var y = point[1];
+         //x,y == center. so...
+         var dims = this.node_w * .41;
+         x -= dims/2;
+         y -= dims/2;
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         ctx.beginPath();
+         ctx.fillStyle = style ? style : "rgb(233,233,233)";
+         ctx.rect(x,y,dims,dims);
+         ctx.fill();
+         this.redrawNodeOnFinal(node_to_mark);
+      },
+      putDotOnNode : function(node_to_mark, style){
+         var ctx = this.getIntermediateCanvas().getContext('2d');
+         var r = this.node_w * .14;
+         var point = this.nodeToPoint(node_to_mark);
+         var x = point[0];
+         var y = point[1];
+
+         ctx.fillStyle = style ? style : "rgb(233,233,233)";
+         ctx.beginPath();
+         ctx.moveTo(x+r, y);
+         ctx.arc(x, y, r, 0, Math.PI*2, true); 
+         ctx.fill();
          this.redrawNodeOnFinal(node_to_mark);
       },
 
@@ -891,6 +937,35 @@ Class ('CinderblockView', {
          this.onCapturesChange = cb;
       },
 
+      // either show deads/territory or mark the current move...
+      decorate: function(){
+         if(this.game.asstatus == 'scoring' && this.viewIsCurrent()){
+            if ( this.game.latestScorable != null ){
+               this.game.log('decorating score; dead stones & territory...');
+               this.markLastScorable();
+               this.scorableMarked = 1;
+            }
+         }
+         else {//if(this.game.asstatus == 'active'){
+            this.markLastMove();
+            this.lastMoveMarked = 1;
+         }
+         //else{
+           // console.log(this.game.asstatus);}
+      },
+      undecorate: function(){
+         if ( this.scorableMarked ){
+            this.unmarkMarkedScorable();
+         }
+         //return;
+         //if(this.game.asstatus == 'active')
+         if ( this.lastMoveMarked ){
+            this.eraseLastMoveMark();
+         }
+         else if (this.asstatus == 'scoring'){
+         }
+      },
+
       // Time controls
       virtuallyGoToMove : function(destMoveNum){
          var view = this;
@@ -898,14 +973,14 @@ Class ('CinderblockView', {
          if(destMoveNum == this.virtualMoveNum){
             return;
          }
-         this.eraseLastMoveMark();
+         this.undecorate();
          if(destMoveNum > this.virtualMoveNum){
             // go forwards in time
             while (destMoveNum != this.virtualMoveNum){
                var event_to_apply = this.game.game_events[this.virtualMoveNum];
                var delta = event_to_apply.delta;
                if(delta.board != null)
-                  this.applyBoardDeltaToCanvas(delta.board);
+                  this.applyBoardDelta (delta.board);
                if(delta.captures != null){
                   $.each(delta.captures, function(color,delt){
                      view.virtualCaptures[color] = delt.after;
@@ -917,7 +992,7 @@ Class ('CinderblockView', {
                //this.log (this.virtualMoveNum);
             }
             this.onVirtualMoveChange(this.virtualMoveNum);
-            this.markLastMove();
+            this.decorate();
             return;
          }
          // go backwards in time
@@ -948,14 +1023,14 @@ Class ('CinderblockView', {
                }
 
                if(reversed_delta.board != null){
-                  this.applyBoardDeltaToCanvas(reversed_delta.board);
+                  this.applyBoardDelta (reversed_delta.board);
                }
                //this.applyCapturesDelta(reversed_delta.captures);
 
                this.virtualMoveNum--;
             }
             this.onVirtualMoveChange(this.virtualMoveNum);
-            this.markLastMove();
+            this.decorate();
             return;
          }
       },
@@ -972,9 +1047,14 @@ Class ('CinderblockView', {
          this.virtuallyGoToMove(this.virtualMoveNum-1);
       },
       virtuallyGoForwards : function(){
-         if(this.virtualMoveNum == this.game.game_events.length)
+         if(this.viewIsCurrent())
             return;
          this.virtuallyGoToMove(this.virtualMoveNum+1);
+      },
+      viewIsCurrent : function(){
+         if(this.virtualMoveNum == this.game.game_events.length)
+            return true;
+         return false;
       },
       
       loadMoveSound : function(){
@@ -990,6 +1070,48 @@ Class ('CinderblockView', {
          i=i%3; //bleh.
          var audioElement = $("audio#stone-sound-"+i);
          audioElement[0].play();
+      },
+      handleScorableChange : function(){
+         if(this.viewIsCurrent()){
+            this.game.log('CHANGING SCORABLE VIEW.');
+            this.decorate();
+         }
+         else{
+            this.game.log('CHANGING SCORABLE; UNVIEWED..');
+         }
+      },
+      unmarkMarkedScorable : function(){
+         this.game.log('marking scorable. ljasdf');
+         var view = this;
+         var scorable = this.markedScorable;
+         if(scorable == null) {return}
+         $.each(scorable.terr.w, function(){
+            view.resetNode(this)});
+         $.each(scorable.terr.b, function(){
+            view.resetNode(this)});
+         $.each(scorable.dead.w, function(){
+            view.resetNode(this)});
+         $.each(scorable.dead.b, function(){
+            view.resetNode(this)});
+         this.markedScorable = null;
+      },
+      markLastScorable : function(){
+         this.game.log('marking scorable. ljasdf');
+         var view = this;
+         var scorable = this.game.latestScorable;
+         if(this.markedScorable){ //something is already marked
+            if(scorable == this.markedScorable) {return} //latest is already marked
+            this.unmarkMarkedScorable(); // unmark.
+         }
+         $.each(scorable.terr.w, function(){
+            view.putDotOnNode(this, 'white'); });
+         $.each(scorable.terr.b, function(){
+            view.putDotOnNode(this, 'black'); });
+         $.each(scorable.dead.w, function(){
+            view.putBoxOnNode(this, 'black'); });
+         $.each(scorable.dead.b, function(){
+            view.putBoxOnNode(this, 'white'); });
+         this.markedScorable = scorable;
       },
    },
 });
