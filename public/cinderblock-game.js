@@ -34,11 +34,6 @@ function mouseEventToRelative(e) {
     return [x,y];
 };
 
-/*
- * Signals:
- * virtual_move_change
- */
-
 Class( 'GridBoard', {
    has: {
       w: {is: 'ro', required: true},
@@ -105,8 +100,9 @@ Role("Emitter", {
       emit : function(signal, args){
          if(this.callbacks[signal] == null){ return }
          $.each(this.callbacks[signal], function(){
-            if(args)
-               this.apply('fakescope', args)
+            if(args){
+               this.apply('fakescope', args);
+            }
             else
                this();
          });
@@ -142,10 +138,6 @@ Class('CinderblockGame', {
          init:function () { return new GridBoard({w: this.w, h: this.h}) },
       },
       actual_turn : {is:'rw',init:'b'},
-      //onNewGameEvent : function(delta){},
-      onTotalMovesChange : function(new_count){},
-      //onGameEnd : function(e){},
-      //asstatus: active/scoring status (+/finished)
       latestScorable: {is: 'rw' }, //init:"active"},
       asstatus : {is: 'rw', init:"active"},
    },
@@ -170,7 +162,6 @@ Class('CinderblockGame', {
          this.game_events.push(move_event);
          this.getActual_board().applyBoardDelta(move_event.delta.board);
          this.actual_turn = move_event.delta.turn.after;
-         //this.onNewGameEvent(move_event); //cb
          this.emit('new_game_event');
       },
       handlePassEvent : function(pe){
@@ -207,6 +198,7 @@ Class('CinderblockGame', {
             this.setStatusFinished(); 
             this.actual_turn = null;
          }
+         this.emit('asstatus_changed', [newAsstatus]);
       },
       setStatusFinished: function(){
          this.setAsstatus('finished');
@@ -307,6 +299,16 @@ Class('CinderblockGame', {
          };
          this.sock.send(JSON.stringify(attempt));
       },
+      attemptDoneScoring : function(){
+         this.log('ATTEMPTing scoring finish');
+         var attempt = {
+            action: 'attempt_done_scoring',
+            done_scoring_attempt: {
+               parent_scorable_r_id : this.getLatestScorable().r_id,
+            }
+         };
+         this.sock.send(JSON.stringify(attempt));
+      },
       timeSinceInitializedInMs : function(){
          if(!this.time_initialized)
             return -1;
@@ -316,6 +318,12 @@ Class('CinderblockGame', {
 }); //end CinderblockGame class
 
 
+
+/*
+ * signals:
+ * virtual_move_change
+ * captures_change
+ */
 
 Class ('CinderblockView', {
    does: [Emitter],
@@ -943,19 +951,15 @@ Class ('CinderblockView', {
                this.scorableMarked = 1;
             }
          }
-         else {//if(this.game.asstatus == 'active'){
+         else {
             this.markLastMove();
             this.lastMoveMarked = 1;
          }
-         //else{
-           // console.log(this.game.asstatus);}
       },
       undecorate: function(){
          if ( this.scorableMarked ){
             this.unmarkMarkedScorable();
          }
-         //return;
-         //if(this.game.asstatus == 'active')
          if ( this.lastMoveMarked ){
             this.eraseLastMoveMark();
          }

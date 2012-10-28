@@ -121,6 +121,7 @@ sub _data_from_some_scorable{
          w => [$scorable->territory('w')->nodes],
          b => [$scorable->territory('b')->nodes],
       },
+      approval => {},
    };
    return $data;
 }
@@ -154,6 +155,7 @@ sub generate_a_scorable_event{
          dame => $self->data->{dame},
          dead => $self->data->{dead},
          terr => $self->data->{terr},
+         approval => $self->data->{approval},
       },
    };
    return $scorable_event;
@@ -164,12 +166,14 @@ sub generate_a_scorable_event{
 sub transanimate{
    my ($self,$node) = @_;
    $self->scorable->transanimate($node);
+   $self->all_disapprove();
 }
 sub update_and_publish{
    my ($self) = @_;
    # key in redis is watched already.
    # multi, set, & exec. only update on success.
    my $new_data = $self->_data_from_some_scorable($self->scorable);
+   $new_data->{approval} = $self->{data}{approval};
    my @res = $self->model->redis_block(
       ['MULTI'], # 'OK'
       [SET => $self->redis_data_key => $json->encode($new_data)],
@@ -185,6 +189,28 @@ sub update_and_publish{
          $json->encode($scorable_event)
       );
    }
+   else{ say 'exec failed. race condition?'}
+}
+
+sub ident_approves{
+   my ($self,$ident) = @_;
+   die 'no ident approves?' unless $ident;
+   my @ident_colors = $self->game->roles_of_ident_id ($ident->{id});
+   for (@ident_colors){
+      $self->data->{approval}{$_} = 1;
+   }
+}
+
+sub do_all_approve{
+   my $self = shift;
+   return 0 unless $self->data->{approval}{w};
+   return 0 unless $self->data->{approval}{b};
+   return 1;
+}
+
+sub all_disapprove{
+   my $self = shift;
+   $self->data->{approval} = {};
 }
 
 # stop watching stordscor like some sort of creeper.
@@ -193,56 +219,5 @@ sub DESTROY{
    $self->model->block_redis->unwatch;
 }
 
-# sub attempt_toggle_stone_state{
-
-=comment
-
-sub FOO_attempt_transanimate{
-   my ($self,$msg) = @_;
-   my $game_id = $self->stash('game_id');
-   my $game = $self->model->game($game_id);
-   return $self->crap_out(6) unless $game->status eq 'scoring';
-   return $self->crap_out(1) unless $color eq $turn;
-
-   my $parent_scorable_id = $msg->{parent_scorable_id};
-   my $scorkey = $self->redis_data_key;
-   $self->model->block_redis->watch($scorkey);
-   my $scorable_representation = $self->model->redis_block(GET => $scorkey);
-   $scorable_representation = $json->decode($scorable_representation);
-   unless ($scorable_representation->{id} == $parent_scorable_id){
-      return $self->crap_out(7);
-   }
-   # construct state & g::g::cb::scorable from what's in redis.
-   my $state = $game->state;
-
-   my $deads = $scorable_representation->{dead};
-   my $dead_ns = $state->rulemap->nodeset;
-   for my $known_deads (values %$deads){
-      my $ns = $state->rulemap->nodeset(@$known_deads);
-      $dead_ns = $dead_ns->union($ns);
-   }
-   my $scorable_object = $state->scorable;
-   $scorable_object->deanimate($dead_ns);
-   $scorable_object->transanimate($msg->{node});
-   
-   my $new_representation = {
-      dame => $scorable_object->dame,
-      terr => $scorable_object->territory,
-      dead => $scorable_object->dead,
-   };
-
-   my $nodes_to_kill_initially =
-   # success! we are participating..
-   my $op = $msg->{operation};
-   my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve?
-   my $node = $op->{node};
-   #somehow atomic & timestamped.
-   my $op_result = $game->atomic_score_op($op);
-   #if ($op_result){
-      # model publishes the operation results if any..
-   #}
-}
-
-=cut
 
 1;

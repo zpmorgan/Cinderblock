@@ -15,6 +15,7 @@
 <script src="//cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/2.1.0/jquery.imagesloaded.min.js"></script>
 <script src="/joose-mini.js" type="text/javascript"></script>
 <script src="/cinderblock-game.js" type="text/javascript"></script>
+<script src="/cinderblock-interface.js" type="text/javascript"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/1.7.0/moment.min.js" type="text/javascript"></script>
 <script src="/happy-chat.js" type="text/javascript"></script>
 
@@ -39,6 +40,11 @@
 
    var relevantGame;
    var relevantView;
+
+   var players_widget;
+   var game_controls;
+   var time_controls;
+
    $(document).ready(function(){
          relevantGame = new CinderblockGame({
             w: PORTAL_DATA.game_w,
@@ -58,6 +64,14 @@
 
          relevantView = relevantGame.setupViewOnCanvas($("canvas#goban")[0]);
          relevantView.draw();
+
+         players_widget = new PlayersWidget(); 
+         game_controls = new GameControlsWidget ({game : relevantGame});
+         time_controls = new TimeControlsWidget ({view : relevantView});
+         // winner display
+         relevantGame.on('game_end', function(end_event){
+            players_widget.showWinner(end_event);
+         });
    });
 
    $(document).ready(function(){
@@ -79,7 +93,6 @@
          });
          relevantGame.on('new_game_event', function(){
             var total_moves = relevantGame.game_events.length;
-            //$('#time-slider').slider("option", "value", move_num);
             $("#time-machine-total-moves").text(total_moves);
             $('#time-slider').slider("option", "max", total_moves);
             if(relevantGame.timeSinceInitializedInMs() >= 1000){
@@ -87,32 +100,35 @@
             }
          });
          relevantView.on('captures_change', function(color, new_num){
-               var caps_elem = $('span.captures-'+color);
-               caps_elem.text(new_num);
-               });
+            var caps_elem = $('span.captures-'+color);
+            caps_elem.text(new_num);
+         });
+         relevantGame.on('scorable_change', function(){
+            var scorable = this.getLatestScorable();
+            players_widget.showScore(scorable);
+            return;
+         });
          $("#bbackb").click(function(){
             relevantView.virtuallyGoToStart();
-            });
+         });
          $("#backb").click(function(){
             relevantView.virtuallyGoBackwards();
-            });
+         });
          $("#forwb").click(function(){
             relevantView.virtuallyGoForwards();
-            });
+         });
          $("#fforwb").click(function(){
             relevantView.virtuallyGoToEnd();
-            });
+         });
       });
    $(document).ready(function(){
-      relevantGame.on('game_end', function(end_event){
-         var result_div = $('<div class="left-panel-controls" />');
-         result_div.text(end_event.winner.toUpperCase() + '+Resign');
-         result_div.css('font-weight', 'bold');
-         $('#logoblock').after(result_div);
-      });
    });
    $(document).ready(function(){
       if(PORTAL_DATA.role == 'player'){
+         // set up game controls.
+         relevantGame.on('asstatus_changed', function(){
+            game_controls.beginScoring();
+         });
          $('#pass-button').click(function(){
             relevantGame.attemptPass();
          });
@@ -143,12 +159,14 @@
             %= stash('b_ident')->{username}
             <br /> caps:
             <span class="captures captures-b">0</span>
+            <div class="score score-b" ></div>
          </div>
          <div class="players-panel-player rel-right">
             <img class='players-panel-giant-stone' src="/w.png">
             %= stash('w_ident')->{username}
             <br /> caps:
             <span class="captures captures-w" >0</span>
+            <div class="score score-w" ></div>
          </div>
          <table style="width:100%">
             <tr>
@@ -169,6 +187,10 @@
       % if (stash('my_role') eq 'player') {
          <div id="special-moves" class='left-panel-controls'>
             <a href="#" id="pass-button"   class="special-button">Pass</a>
+            <a href="#" id='resign-button' class="special-button">Resign</a>
+         </div>
+         <div id="scoring-controls" class='left-panel-controls' style="display:none">
+            <a href="#" id="done-scoring-button"   class="special-button">Done</a>
             <a href="#" id='resign-button' class="special-button">Resign</a>
          </div>
       % }

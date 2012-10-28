@@ -162,6 +162,9 @@ sub game_event_socket{
          elsif($action eq 'attempt_transanimate'){
             $self->attempt_transanimate($msg_data);
          }
+         elsif($action eq 'attempt_done_scoring'){
+            $self->attempt_done_scoring($msg_data);
+         }
          elsif($action eq 'ping'){
             $ws->send('{"event_type":"pong"}');
          }
@@ -330,19 +333,19 @@ sub attempt_pass{
       delta => {turn => {before => $color, after => $game->turn}},
    };
 
-   my $initialize_scorable = 0;
+   my $do_initialize_scorable = 0;
    if($game->last_move_was_pass){
       $game->set_status_scoring;
       $event->{status_after} = 'scoring';
       # nobody's turn during scoring.
       # an empty string will do.
       $event->{delta}{turn}{after} = '';
-      $initialize_scorable = 1;
+      $do_initialize_scorable = 1;
    }
    $game->push_event($event);
    $game->update();
 
-   $self->initialize_scorable if $initialize_scorable;
+   $self->initialize_scorable if $do_initialize_scorable;
 
    return;
 }
@@ -385,24 +388,6 @@ sub initialize_scorable {
    my $stordscor = $self->model->stordscor($game_id);
    $stordscor->publish();
    return;
-   #my $state = $game->state;
-   #my $scorable = $state->scorable;
-   my $scorable;
-   my $scorable_event = {
-      type => 'scorable',
-      scorable => {
-         dame => [$scorable->dame->nodes],
-         dead => {
-            w => [$scorable->dead('w')->nodes],
-            b => [$scorable->dead('b')->nodes],
-         },
-         terr => {
-            w => [$scorable->territory('w')->nodes],
-            b => [$scorable->territory('b')->nodes],
-         },
-      },
-   };
-   $self->model->pub_redis->publish("game_events:$game_id" => $json->encode($scorable_event));
 }
 
 # sub attempt_toggle_stone_state{
@@ -442,27 +427,24 @@ sub attempt_transanimate{
    return;
 }
 
-=comment 
+sub attempt_done_scoring{
+   my ($self,$msg) = @_;
+   my $game_id = $self->stash('game_id');
+   my $game = $self->model->game($game_id);
+   return $self->crap_out(6) unless $game->status eq 'scoring';
 
-   $stordscor->update;
-   my $new_representation = {
-      dame => $scorable_object->dame,
-      terr => $scorable_object->territory,
-      dead => $scorable_object->dead,
-   };
-
-   my $nodes_to_kill_initially =3; #what?
-   # success! we are participating..
-   my $op = $msg->{operation};
-   my $optype = $op->{type}; #toggle? mark_(dead|alive)? approve?
-   my $node = $op->{node};
-   #somehow atomic & timestamped.
-   my $op_result = $game->atomic_score_op($op); # huh?
-   #if ($op_result){
-      # model publishes the operation results if any..
-   #}
+   my $stordscor = $game->stordscor;
+   my $attempt = $msg->{done_scoring_attempt};
+   my $msg_parent_scorable_r_id = $attempt->{parent_scorable_r_id};
+   die 'no paremt scor id.' unless defined $msg_parent_scorable_r_id;
+   unless ($msg_parent_scorable_r_id == $stordscor->r_id){
+      return $self->crap_out(7);
+   }
+   $stordscor->ident_approves($self->ident);
+   $stordscor->update_and_publish;
+   #action: 'attempt_done_scoring',
+   #done_scoring_attempt: {
+   #   parent_scorable_r_id : this.getLatestScorable().r_id,
 }
-
-=cut
 
 1;
