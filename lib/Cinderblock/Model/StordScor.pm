@@ -213,6 +213,15 @@ sub all_disapprove{
    $self->data->{approval} = {};
 }
 
+sub winner{ # 'w' or 'b'
+   my $self = shift;
+   return $self->scorable->winner;
+}
+sub score_difference{ # 3.5
+   my $self = shift;
+   my $scores = $self->scorable->scores;
+   return abs ($scores->{w} - $scores->{b});
+}
 # stop watching stordscor like some sort of creeper.
 sub DESTROY{
    my $self = shift;

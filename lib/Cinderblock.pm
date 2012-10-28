@@ -4,7 +4,7 @@ use Cinderblock::Model;
 use Mojo::JSON;
 my $json = Mojo::JSON->new();
 
-our $VERSION = 0.09;
+our $VERSION = 0.11;
 
 our $model = Cinderblock::Model->instance;
 use Carp;

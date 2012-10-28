@@ -445,8 +445,9 @@ sub attempt_done_scoring{
    if($stordscor->do_all_approve()){
       #all approve. someone won.
       $game->status('finished');
-      # my $winner = $scorable->winner; #derp
-      my $winner = 'b';
+      my $winner = $stordscor->winner; #derp
+      my $diff = $stordscor->score_difference; #derp
+      #my $winner = 'b';
       $game->winner($winner);
       # finish event.
       my $event = {
@@ -454,7 +455,7 @@ sub attempt_done_scoring{
          time_ms => cur_time_ms(),
          winner => $game->winner,
          status_after => 'finished',
-         score_difference => 12.3456789,
+         score_difference => $diff,
          delta => {},
       };
       $game->push_event($event);
