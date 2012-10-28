@@ -442,6 +442,24 @@ sub attempt_done_scoring{
    }
    $stordscor->ident_approves($self->ident);
    $stordscor->update_and_publish;
+   if($stordscor->do_all_approve()){
+      #all approve. someone won.
+      $game->status('finished');
+      # my $winner = $scorable->winner; #derp
+      my $winner = 'b';
+      $game->winner($winner);
+      # finish event.
+      my $event = {
+         type => 'finish', 
+         time_ms => cur_time_ms(),
+         winner => $game->winner,
+         status_after => 'finished',
+         score_difference => 12.3456789,
+         delta => {},
+      };
+      $game->push_event($event);
+      $game->update();
+   }
    #action: 'attempt_done_scoring',
    #done_scoring_attempt: {
    #   parent_scorable_r_id : this.getLatestScorable().r_id,

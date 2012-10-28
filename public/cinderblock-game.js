@@ -174,7 +174,7 @@ Class('CinderblockGame', {
       },
       handleResignEvent : function(re){
          this.game_events.push(re);
-         this.actual_turn = re.turn_after;
+         //this.actual_turn = re.turn_after;
          this.emit('new_game_event');
          this.emit('game_end', [re]);
       },
@@ -182,6 +182,11 @@ Class('CinderblockGame', {
          this.log('received scorable. showing scorable?');
          this.setLatestScorable(msg.scorable);
          this.emit('scorable_change') ;
+      },
+      handleFinishMessage : function(msg){
+         this.game_events.push(msg); //okay?
+         this.emit('new_game_event');
+         this.emit('game_end', [msg]);
       },
 
       changeAsstatus: function(newAsstatus){
@@ -232,6 +237,9 @@ Class('CinderblockGame', {
             }
             else if(msg.type == 'scorable'){
                game.handleScorableMessage(msg);
+            }
+            else if(msg.type == 'finish'){
+               game.handleFinishMessage(msg);
             }
             //else if (msg.type == 'status_change'){
             //   game.handleStatusChange(msg);

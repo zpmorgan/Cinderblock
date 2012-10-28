@@ -65,7 +65,8 @@
          relevantView = relevantGame.setupViewOnCanvas($("canvas#goban")[0]);
          relevantView.draw();
 
-         players_widget = new PlayersWidget(); 
+         players_widget = $('div.players-panel').PlayersWidget();
+         // players_widget = new PlayersWidget(); 
          game_controls = new GameControlsWidget ({game : relevantGame});
          time_controls = new TimeControlsWidget ({view : relevantView});
          // winner display
@@ -104,6 +105,7 @@
             caps_elem.text(new_num);
          });
          relevantGame.on('scorable_change', function(){
+            this.log("scorable_change'd.");
             var scorable = this.getLatestScorable();
             players_widget.showScore(scorable);
             return;
@@ -126,14 +128,16 @@
    $(document).ready(function(){
       if(PORTAL_DATA.role == 'player'){
          // set up game controls.
-         relevantGame.on('asstatus_changed', function(){
-            game_controls.beginScoring();
+         relevantGame.on('asstatus_changed', function(new_asstatus){
+            if(new_asstatus == 'scoring'){
+               game_controls.beginScoring();
+            }
          });
          $('#pass-button').click(function(){
-            relevantGame.attemptPass();
+         //   relevantGame.attemptPass();
          });
          $('#resign-button').click(function(){
-            relevantGame.attemptResign();
+         //   relevantGame.attemptResign();
          });
       };
    });

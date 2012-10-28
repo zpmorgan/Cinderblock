@@ -29,8 +29,16 @@ Class('PlayersWidget', {
          });
       },
       showWinner : function(end_event){
+         console.log(end_event);
          var result_div = $('<div class="FOO-left-panel-controls" />');
-         result_div.text(end_event.winner.toUpperCase() + '+Resign');
+         var win_color= end_event.winner;
+         var reason;
+         if (end_event.type == 'resign'){
+            reason = 'Resign';
+         }else {
+            reason = end_event.score_difference;
+         }
+         result_div.text(win_color.toUpperCase() + '+' + reason);
          result_div.css('font-weight', 'bold');
          this.div.prepend(result_div);
       },
@@ -60,7 +68,7 @@ Class('GameControlsWidget', {
          this.getPassButton().click(function(){
             game.attemptPass();
          });
-         this.resignButton = $('#pass-button');
+         this.resignButton = $('#resign-button');
          this.getResignButton().click(function(){
             game.attemptResign();
          });
@@ -77,3 +85,8 @@ Class('TimeControlsWidget', {
    has: {view : {is : 'ro'}},
    methods: {},
 });
+
+$.fn.PlayersWidget = function(){
+   var foo = new PlayersWidget({div : this});
+   return foo;
+};
