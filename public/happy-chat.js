@@ -105,8 +105,6 @@ function _build_input_field(){
             text : happy_text,
             time_ms : Date.now(),
          };
-         //alert(happy_text);
-         chat.onMsgRequest(happy_msg_req);
          chat.chat_sock.send(JSON.stringify(happy_msg_req));
       }
       e.stopPropagation();
