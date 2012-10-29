@@ -27,6 +27,7 @@ Class('PlayersWidget', {
                );
             score_elem.append( $('<br />') );
          });
+         this.checkPlayerPanelSizes();
       },
       showWinner : function(end_event){
          console.log(end_event);
@@ -40,7 +41,41 @@ Class('PlayersWidget', {
          }
          result_div.text(win_color.toUpperCase() + '+' + reason);
          result_div.css('font-weight', 'bold');
-         this.div.prepend(result_div);
+         this.div.before(result_div);
+         this.checkPlayerPanelSizes();
+      },
+      showTurn : function(color){
+         if(this.shown_turn){
+            this.playerPanel(this.shown_turn).removeClass('shown-turn');
+            this.shown_turn = null;
+         }
+         if(color != null){
+            this.playerPanel(color).addClass('shown-turn');
+            this.shown_turn = color;
+         }
+      },
+      playerPanel : function(color){
+         //return a selector: a div with that gostone & player-specific elems.
+         return $('#player-panel-' + color);
+      },
+      checkPlayerPanelSizes : function(){
+         console.log('resizing players panel.');
+         var b_size = this.playerPanel('b').height(); // calc'd h in pixels...
+         var w_size = this.playerPanel('w').height();
+         var new_size = b_size > w_size ? b_size : w_size;
+         this.div.height( new_size );
+         console.log(new_size);
+      },
+   },
+   after: {
+      initialize : function(){
+         console.log('setting up resize handdler.');
+         var foo = this;
+         //this.playerPanel('w').resize(function(){
+         $('.players-panel-player').resize(function(){
+            foo.checkPlayerPanelSizes();
+         });
+         this.checkPlayerPanelSizes();
       },
    },
 });

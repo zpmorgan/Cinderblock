@@ -162,7 +162,7 @@ Class('CinderblockGame', {
          this.game_events.push(move_event);
          this.getActual_board().applyBoardDelta(move_event.delta.board);
          this.actual_turn = move_event.delta.turn.after;
-         this.emit('new_game_event');
+         this.emit('new_game_event', [move_event]);
       },
       handlePassEvent : function(pe){
          this.game_events.push(pe);
@@ -170,12 +170,12 @@ Class('CinderblockGame', {
          if(delta && delta.turn){
             this.actual_turn = delta.turn.after;
          }
-         this.emit('new_game_event');
+         this.emit('new_game_event', [pe]);
       },
       handleResignEvent : function(re){
          this.game_events.push(re);
          //this.actual_turn = re.turn_after;
-         this.emit('new_game_event');
+         this.emit('new_game_event', [re]);
          this.emit('game_end', [re]);
       },
       handleScorableMessage: function(msg){
@@ -185,7 +185,7 @@ Class('CinderblockGame', {
       },
       handleFinishMessage : function(msg){
          this.game_events.push(msg); //okay?
-         this.emit('new_game_event');
+         this.emit('new_game_event', [msg]);
          this.emit('game_end', [msg]);
       },
 

@@ -92,13 +92,17 @@
             $(".ui-slider-horizontal .ui-state-default").css(
                'background-image', move_num % 2 ? 'url(/b.png)' : 'url(/w.png)');
          });
-         relevantGame.on('new_game_event', function(){
+         relevantGame.on('new_game_event', function(e){
             var total_moves = relevantGame.game_events.length;
             $("#time-machine-total-moves").text(total_moves);
             $('#time-slider').slider("option", "max", total_moves);
             if(relevantGame.timeSinceInitializedInMs() >= 1000){
                relevantView.playMoveSound();
             }
+            var new_turn;
+            if(e.delta && e.delta.turn)
+               new_turn = e.delta.turn.after;
+            players_widget.showTurn(new_turn);
          });
          relevantView.on('captures_change', function(color, new_num){
             var caps_elem = $('span.captures-'+color);
@@ -158,14 +162,14 @@
    <div class="leftoblock">
       <h2 id="logoblock"> Cinderblock </h2>
       <div class="players-panel" class='left-panel-controls'>
-         <div class="players-panel-player rel-left">
+         <div id="player-panel-b" class="players-panel-player rel-left">
             <img class='players-panel-giant-stone' src="/b.png">
             %= stash('b_ident')->{username}
             <br /> caps:
             <span class="captures captures-b">0</span>
             <div class="score score-b" ></div>
          </div>
-         <div class="players-panel-player rel-right">
+         <div id="player-panel-w" class="players-panel-player rel-right">
             <img class='players-panel-giant-stone' src="/w.png">
             %= stash('w_ident')->{username}
             <br /> caps:
