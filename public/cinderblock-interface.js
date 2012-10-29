@@ -59,10 +59,14 @@ Class('PlayersWidget', {
          return $('#player-panel-' + color);
       },
       checkPlayerPanelSizes : function(){
-         console.log('resizing players panel.');
+         //console.log('resizing players panel.');
+         var foo = this;
          var b_size = this.playerPanel('b').height(); // calc'd h in pixels...
          var w_size = this.playerPanel('w').height();
          var new_size = b_size > w_size ? b_size : w_size;
+         if(new_size < 100){ 
+            setTimeout(function() {foo.checkPlayerPanelSizes()}, 20);
+         }
          this.div.height( new_size );
          console.log(new_size);
       },
