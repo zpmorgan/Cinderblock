@@ -128,20 +128,12 @@
          });
       });
    $(document).ready(function(){
-   });
-   $(document).ready(function(){
       if(PORTAL_DATA.role == 'player'){
          // set up game controls.
          relevantGame.on('asstatus_changed', function(new_asstatus){
             if(new_asstatus == 'scoring'){
                game_controls.beginScoring();
             }
-         });
-         $('#pass-button').click(function(){
-         //   relevantGame.attemptPass();
-         });
-         $('#resign-button').click(function(){
-         //   relevantGame.attemptResign();
          });
       };
    });
