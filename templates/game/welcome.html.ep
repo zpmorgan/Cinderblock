@@ -11,21 +11,29 @@
             channel: "welcome", 
          });
          hc.displayMessage({speaker:'cows', time:123, text:'moo'});
+         hc.chanFolks( $('div.chan-folks') );
    });
 </script>
 
 <div class="wrapperblock ">
    <div style="height: 40px; display:block;margin:0 auto"> </div>
-   <div class="welcome rounded-corners colors-light-on-dark">
-      The Cinderblock Go Server is capable of realtime or correspondence-style
-      Go games on a planar, cylindrical, or toroidal board. It supports board
-      sizes from 2 to 30 nodes in either dimension.
-      <br />
-      <a href="http://cinderblock.zpmorgan.com/new_game">New game</a>
-      % if (stash 'last_active_game') {
+   <div style="height: 200px; min-width: 40em; max-width: 80% ; position:relative; margin:0 auto">
+      <div style="position:absolute; left:0px; width:48% ; top:0px ; bottom:0px; "
+           class="welcome rounded-corners colors-light-on-dark">
+         The Cinderblock Go Server is capable of realtime or correspondence-style
+         Go games on a planar, cylindrical, or toroidal board. It supports board
+         sizes from 2 to 30 nodes in either dimension.
          <br />
-         <a href="<%=$self->req->url->base%>/game/<%=stash ('last_active_game')%>">Example game</a>
-      % }
+         <a href="http://cinderblock.zpmorgan.com/new_game">New game</a>
+         % if (stash 'last_active_game') {
+            <br />
+            <a href="<%=$self->req->url->base%>/game/<%=stash ('last_active_game')%>">Example game</a>
+         % }
+      </div>
+      <div style="position:absolute; right:0;top:0;bottom:0 ; width: 40%;"
+         class="chan-folks rounded-corners colors-light-on-orange"> 
+         <h3> Folks present </h3>
+      </div>
    </div>
    <h3 style="color:#ccc;"> Happy little chat box: </h3>
    <div class="welcome-happy-chat"> </div>

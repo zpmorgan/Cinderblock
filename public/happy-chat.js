@@ -5,6 +5,7 @@ Class('HappyChat', {
       elem: {is:'ro', required:true},
       messages_elem: {is:'ro', required: true},
       txtfield_elem: {is:'ro', lazy: false, init: _build_input_field},
+      chanFolks: {is:'rw' },
    },
    methods:{
       displayMessage: function(happy_msg_event){
@@ -53,13 +54,23 @@ Class('HappyChat', {
          this.chat_sock = new WebSocket(this.sock_url);
          this.chat_sock.onmessage = function  (event) {
             var msg = $.parseJSON(event.data);
+            if(msg.type == 'happy_msg'){
+               hc.displayMessage (msg);
+               return;
+            }
             if(msg.type == 'ping'){
                hc.chat_sock.send('{"type": "pong"}');
                return;
             }
             if(msg.type == 'pong')
                return;
-            hc.displayMessage (msg);
+            if(msg.type == 'folk_list'){
+               hc.handleFolksMsg(msg);
+            }
+            if(msg.type == 'folk_enter'){
+               var elem = $('<div class="folk"></div>').text(msg.folk.ident_name);
+               hc.chanFolks.append(elem);
+            }
          };
          this.chat_sock.onclose= function () {
             hc.displayMessage ({
@@ -77,7 +88,39 @@ Class('HappyChat', {
             var PINGS = setInterval(function(){
                hc.chat_sock.send('{"type": "ping"}');
             }, 10000);
+            //user list for channel?
+            if(this.registerLater)
+               this.registerOnceAsFolk();
          };
+      },
+      // 'Folk', == connected user list for channel.
+      registerOnceAsFolk: function(sel){
+         //already did this?
+         if(this.sentFolkRegistration == true)
+            return;
+         //is sock open?
+         if(this.chat_sock.readyState == 1){
+            var folkRegistryMsg = {
+               type : 'folk_register',
+            };
+            this.chat_sock.send( JSON.stringify(folkRegistryMsg) );
+            this.registerLater = false;
+            this.sentFolkRegistration = true;
+            return;
+         }
+         this.registerLater = true;
+      },
+      chanFolks : function(sel){
+         this.setChanFolks(sel);
+         this.registerOnceAsFolk();
+      },
+      handleFolksMsg : function(msg){
+         var hc = this;
+         hc.folksMsg = msg;
+         $.each( msg.folk_list, function(){
+            var elem = $('<div class="folk"></div>').text(this.ident_name);
+            hc.chanFolks.append(elem);
+         });
       },
    },
    after: {

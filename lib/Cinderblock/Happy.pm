@@ -6,6 +6,7 @@ my $json = Mojo::JSON->new();
 #use Mojo::Redis;
 use Cinderblock::Model;
 use Time::HiRes;
+use Data::Dumper;
 
 # Websocket.
 sub happychat{
@@ -27,13 +28,56 @@ sub happychat{
             $ws->send($m);
          }
    });
+   
+   # zfolk is a redis sorted set which tracks folk membership over time.
 
+   my $folk = {
+      ident_id => $self->ident->{id},
+      ident_name => $self->ident->{username},
+      channel_name => $channel_name,
+      time => Time::HiRes::time(),
+      fid => $self->redis_block(INCR => 'next_fid'),
+   };
+   my $folk_json = $json->encode($folk);
+
+   #TODO: use to cull unrenewed/expired folk membership?
+   my $folk_bump = sub{
+      $self->model->getset_redis->zadd( 
+         zfolk => Time::HiRes::time(),
+         $folk_json
+      );
+   };
+   
+   #do the folk list
+   my $folk_enter_msg = {
+      type => 'folk_enter',
+      folk => $folk,
+   };
+   $self->pub_redis->publish($hc_channel_name, $json->encode($folk_enter_msg));
+   #put folk entry in some structure recording channel participation
+   #a json-encoded list in a hash keyed by channel-name
+   my $folk_list = $json->decode($self->redis_block(
+         HGET => "hfolk" => $hc_channel_name 
+      ));
+   push @$folk_list, $folk;
+   $self->redis_block( 
+      HSET => "hfolk" => $hc_channel_name, $json->encode($folk_list)
+   );
+   # send current folk list to client.
+   $ws->send( $json->encode( {
+            type => 'folk_list',
+            folk_list => $folk_list,
+   } ) );
+
+
+   #subscribe to channel events: messages, pings, folk list updates.
    $sub_redis->subscribe($hc_channel_name, 'DONTDIEONME' => sub{
          my ($redis, $event) = @_;
          if ($event->[0] eq 'subscribe'){
             return;
          };
          return if ($event->[2] eq 'ping');
+         say $event->[2];
          $ws->send($event->[2]);
       });
    $self->on(message => sub {
@@ -73,13 +117,24 @@ sub happychat{
    });
    $self->on(finish => sub {
          my $ws = shift;
-         #my $sub_redis = $self->stash('hc_sub_redis');
-         #delete $self->stash->{hc_sub_redis};
-         #$sub_redis->disconnect;
          $sub_redis->DESTROY;
-         #$sub_redis->timeout(2);
-         #$sub_redis->ioloop->remove($sub_redis->{_connection});
          say 'hc WebSocket closed.';
+
+         #remove from folk list
+         my $folk_leave_msg = {
+            type => 'folk_leave',
+            folk => $folk,
+         };
+         $folk_leave_msg = $json->encode($folk_leave_msg);
+         $self->model->pub_redis->publish( $hc_channel_name => $folk_leave_msg );
+         my $folk_list = $json->decode($self->redis_block(
+               HGET => "hfolk" => $hc_channel_name 
+            ) || '[]');
+         # say join ',',sort map {$_->{fid}} @$folk_list;
+         $folk_list = [ grep {$_->{fid} != $folk->{fid} } @$folk_list ];
+         $self->redis_block( 
+            HSET => "hfolk" => $hc_channel_name, $json->encode($folk_list)
+         );
       });
 }
 
