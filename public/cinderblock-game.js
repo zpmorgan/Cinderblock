@@ -4,6 +4,10 @@
 // So Game has a View, game & view each have GridBoards.
 // view has decoration & canvases...
 // game has no reference to view... only callbacks?
+//
+// 'Scorable' territory does not include nodes with dead stones.
+// maybe it should be more nuanced or something
+// so just add that to terr for 2player, i guess.
 
 
 // 2 utility funcs:
@@ -34,7 +38,56 @@ function mouseEventToRelative(e) {
     return [x,y];
 };
 
+Class( "Board",{
+   methods : {
+      applyBoardDelta : function(boardDelta){
+         var board = this;
+         if(boardDelta.add != null){
+            $.each(boardDelta.add, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  board.setNode(node, color);
+               });
+            });
+         }
+         if(boardDelta.remove != null){
+            $.each(boardDelta.remove, function(color,nodes){
+               $.each(nodes, function(){
+                  var node = this;
+                  board.clearNode(node);
+               });
+            });
+         }
+      },
+   },
+
+});
+
+Class( "GraphBoard", {
+   isa : Board,
+   has : {
+      n : {is : 'ro', required : true },
+      data : {is : 'ro', required : false, 
+         init:function(){
+            return [];
+         },
+      },
+   },
+   methods : {
+      getStoneAtNode : function(node){
+         return this.getData()[node];
+      },
+      setNode : function(node,stone){
+         this.getData()[node] = stone;
+      },
+      clearNode : function(node){
+         this.getData()[node] = '';
+      },
+   },
+});
+
 Class( 'GridBoard', {
+   isa : Board,
    has: {
       w: {is: 'ro', required: true},
       h: {is: 'ro', required: true},
@@ -58,25 +111,6 @@ Class( 'GridBoard', {
       },
       clearNode : function(node){
          this.getData()[node[0]][node[1]] = '';
-      },
-      applyBoardDelta : function(boardDelta){
-         var board = this;
-         if(boardDelta.add != null){
-            $.each(boardDelta.add, function(color,nodes){
-               $.each(nodes, function(){
-                  var node = this;
-                  board.setNode(node, color);
-               });
-            });
-         }
-         if(boardDelta.remove != null){
-            $.each(boardDelta.remove, function(color,nodes){
-               $.each(nodes, function(){
-                  var node = this;
-                  board.clearNode(node);
-               });
-            });
-         }
       },
    },
 });

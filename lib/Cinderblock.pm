@@ -116,4 +116,10 @@ sub startup {
    $r->websocket('/happy/:channel')->to('happy#happychat');
 }
 
+=head1 TODO
+
+http://code.google.com/p/openid-selector/
+
+=cut
+
 1;

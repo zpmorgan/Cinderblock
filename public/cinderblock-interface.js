@@ -14,6 +14,8 @@ Class('PlayersWidget', {
          var terr = {
             w : scorable.terr.w.length,
             b : scorable.terr.b.length, };
+         terr.w += dead.b;
+         terr.b += dead.w;
          $.each(['w','b'], function(){
             var color = this;
             var score_elem = $('div.score-'+color);
