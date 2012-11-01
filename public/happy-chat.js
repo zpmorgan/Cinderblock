@@ -66,10 +66,18 @@ Class('HappyChat', {
                return;
             if(msg.type == 'folk_list'){
                hc.handleFolksMsg(msg);
+               return;
             }
             if(msg.type == 'folk_enter'){
+               var div_fid = 'fid-' + msg.folk.fid;
                var elem = $('<div class="folk"></div>').text(msg.folk.ident_name);
+               elem.attr("id", div_fid);
                hc.chanFolks.append(elem);
+               return;
+            }
+            if(msg.type == 'folk_leave'){
+               hc.removeFolk(msg.folk);
+               return;
             }
          };
          this.chat_sock.onclose= function () {
@@ -114,11 +122,18 @@ Class('HappyChat', {
          this.setChanFolks(sel);
          this.registerOnceAsFolk();
       },
+      removeFolk : function(folk){
+         var div_fid = 'fid-' + folk.fid;
+         //$('div.folk').filter(function() { return $.text([this]) === folk_name; }).remove();
+         $('div.folk').filter(function() { console.log(this);return $(this).attr("id") === div_fid; }).remove();
+      },
       handleFolksMsg : function(msg){
          var hc = this;
          hc.folksMsg = msg;
          $.each( msg.folk_list, function(){
+            var div_fid = 'fid-' + this.fid;
             var elem = $('<div class="folk"></div>').text(this.ident_name);
+            elem.attr("id", div_fid);
             hc.chanFolks.append(elem);
          });
       },

@@ -42,6 +42,14 @@ div.tinyheadercenter a{
    background: #883900;
 }
 
+div.chan-folks{
+   overflow-y:scroll;
+}
+div.folk{
+   border: 2px solid grey;
+   margin: 2px;
+}
+
 .middoform{
    display: inline-block;
 }
