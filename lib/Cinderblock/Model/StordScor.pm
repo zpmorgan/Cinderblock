@@ -3,8 +3,7 @@ use Modern::Perl;
 use 5.16.0;
 use Moose;
 use Mojo::Redis;
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 use Data::Dumper;
 
 # initialize this with game_id or game
@@ -133,7 +132,7 @@ sub _gen_and_store_new_data{
    my $state = $game->state;
    my $scorable = $state->scorable;
    my $data = $self->_data_from_some_scorable($scorable);
-   $self->model->redis_block(SET => $self->redis_data_key => $json->encode($data));
+   $self->model->redis_block(SET => $self->redis_data_key => encode_json($data));
    #die Dumper($data);
    return $data;
 }
@@ -143,7 +142,7 @@ sub publish{
    my $scorable_event = $self->generate_a_scorable_event;
    $self->model->pub_redis->publish(
       $self->redis_game_event_channel,
-      $json->encode($scorable_event)
+      encode_json($scorable_event)
    );
 }
 sub generate_a_scorable_event{
@@ -176,7 +175,7 @@ sub update_and_publish{
    $new_data->{approval} = $self->{data}{approval};
    my @res = $self->model->redis_block(
       ['MULTI'], # 'OK'
-      [SET => $self->redis_data_key => $json->encode($new_data)],
+      [SET => $self->redis_data_key => encode_json($new_data)],
       ['EXEC'],
    );
    my $exec_res = $res[2];
@@ -186,7 +185,7 @@ sub update_and_publish{
       my $scorable_event = $self->generate_a_scorable_event;
       $self->model->pub_redis->publish(
          $self->redis_game_event_channel,
-         $json->encode($scorable_event)
+         encode_json($scorable_event)
       );
    }
    else{ say 'exec failed. race condition?'}

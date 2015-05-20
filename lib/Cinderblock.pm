@@ -1,8 +1,7 @@
 package Cinderblock;
 use Mojo::Base 'Mojolicious';
 use Cinderblock::Model;
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 
 our $VERSION = 0.11;
 
@@ -16,7 +15,7 @@ sub startup {
 
    my $config = $self->plugin('JSONConfig');
 
-   $self->secret('$skppxa>adsions->default_expikcvion(3fs00); #100 foos');
+   $self->secrets(['$skppxa>adsions->default_expikcvion(3fs00); #100 foos']);
    $self->sessions->default_expiration(36000000); #10000 hours
    # Documentation browser under "/perldoc"
    $self->plugin('PODRenderer');
@@ -43,7 +42,7 @@ sub startup {
       my $ident_id = $self->session('ident_id');
       if($ident_id){
          $ident = $self->redis_block(HGET => 'ident', $ident_id);
-         $ident = $json->decode($ident);
+         $ident = decode_json($ident);
          $self->stash(ident => $ident);
          return $ident;
       }

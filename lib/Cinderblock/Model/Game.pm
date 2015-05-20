@@ -3,8 +3,7 @@ use Modern::Perl;
 use 5.16.0;
 use Moose;
 use Mojo::Redis;
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 
 use Time::HiRes;
 
@@ -87,7 +86,7 @@ sub from_id{
    die unless $id;
    my $json_data = $model->redis_block(HGET => game => $id);
    return unless $json_data;
-   my $data = $json->decode($json_data);
+   my $data = decode_json($json_data);
    $data->{id} = $id; #foo
    return __PACKAGE__->new(data => $data);
 }
@@ -98,13 +97,13 @@ sub update{
    my $id = $self->data->{id};
    # don't let invalid turns go through. it's 'w','b', or 'none'
    die "turn ". $self->data->{turn} unless ($self->data->{turn} =~ /^(none|[wb])$/);
-   $self->model->redis_block(HSET => game => $id => $json->encode($self->data));
+   $self->model->redis_block(HSET => game => $id => encode_json($self->data));
 }
 
 sub roles{
    my $self = shift;
    my $roles = $self->model->redis_block('HGET',game_roles => $self->id) // '{}';
-   return $json->decode($roles);
+   return decode_json($roles);
 }
 sub set_role{
    my $self = shift;
@@ -112,7 +111,7 @@ sub set_role{
    my $ident_id = shift;
    my $roles = $self->roles;
    $roles->{$color} = $ident_id;
-   $self->model->redis_block(HSET => game_roles => $self->id => $json->encode($roles));
+   $self->model->redis_block(HSET => game_roles => $self->id => encode_json($roles));
 }
 
 # this returns any colors where role{color} == ident_id
@@ -186,7 +185,7 @@ sub push_event{
    my ($self,$event) = @_;
    push @{$self->data->{game_events}}, $event;
    my $id = $self->id;
-   $self->model->pub_redis->publish("game_events:$id" => $json->encode($event));
+   $self->model->pub_redis->publish("game_events:$id" => encode_json($event));
    # for activity page.
    $self->promote_activity();
 }

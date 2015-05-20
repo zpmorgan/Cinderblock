@@ -1,8 +1,7 @@
 package Cinderblock::Happy;
 use Modern::Perl;;
 use Mojo::Base 'Mojolicious::Controller';
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 #use Mojo::Redis;
 use Cinderblock::Model;
 use Time::HiRes;
@@ -38,7 +37,7 @@ sub happychat{
       time => Time::HiRes::time(),
       fid => $self->redis_block(INCR => 'next_fid'),
    };
-   my $folk_json = $json->encode($folk);
+   my $folk_json = encode_json($folk);
 
    #TODO: use to cull unrenewed/expired folk membership?
    my $folk_bump = sub{
@@ -53,18 +52,18 @@ sub happychat{
       type => 'folk_enter',
       folk => $folk,
    };
-   $self->pub_redis->publish($hc_channel_name, $json->encode($folk_enter_msg));
+   $self->pub_redis->publish($hc_channel_name, encode_json($folk_enter_msg));
    #put folk entry in some structure recording channel participation
    #a json-encoded list in a hash keyed by channel-name
-   my $folk_list = $json->decode($self->redis_block(
+   my $folk_list = decode_json($self->redis_block(
          HGET => "hfolk" => $hc_channel_name 
       ));
    push @$folk_list, $folk;
    $self->redis_block( 
-      HSET => "hfolk" => $hc_channel_name, $json->encode($folk_list)
+      HSET => "hfolk" => $hc_channel_name, encode_json($folk_list)
    );
    # send current folk list to client.
-   $ws->send( $json->encode( {
+   $ws->send( encode_json( {
             type => 'folk_list',
             folk_list => $folk_list,
    } ) );
@@ -82,9 +81,9 @@ sub happychat{
       });
    $self->on(message => sub {
       my ($ws, $msg) = @_;
-      my $msg_data = $json->decode($msg);
+      my $msg_data = decode_json($msg);
       if($msg_data->{type} eq 'ping'){
-         $ws->send($json->encode({type=>'pong'}));
+         $ws->send(encode_json({type=>'pong'}));
          return;
       }
       if($msg_data->{type} eq 'pong'){
@@ -106,7 +105,7 @@ sub happychat{
          time_ms => $time_ms,
          speaker => $speaker,
       };
-      $happy_msg_out = $json->encode($happy_msg_out);
+      $happy_msg_out = encode_json($happy_msg_out);
       $self->pub_redis->publish($hc_channel_name, $happy_msg_out);
       $self->getset_redis->rpush($channel_store_name => $happy_msg_out);
       my $do_trim = ($channel_name =~ /welcome/) ? 1 : 0;
@@ -125,15 +124,15 @@ sub happychat{
             type => 'folk_leave',
             folk => $folk,
          };
-         $folk_leave_msg = $json->encode($folk_leave_msg);
+         $folk_leave_msg = encode_json($folk_leave_msg);
          $self->model->pub_redis->publish( $hc_channel_name => $folk_leave_msg );
-         my $folk_list = $json->decode($self->redis_block(
+         my $folk_list = decode_json($self->redis_block(
                HGET => "hfolk" => $hc_channel_name 
             ) || '[]');
          # say join ',',sort map {$_->{fid}} @$folk_list;
          $folk_list = [ grep {$_->{fid} != $folk->{fid} } @$folk_list ];
          $self->redis_block( 
-            HSET => "hfolk" => $hc_channel_name, $json->encode($folk_list)
+            HSET => "hfolk" => $hc_channel_name, encode_json($folk_list)
          );
       });
 }

@@ -4,8 +4,7 @@ use 5.16.0;
 #use Moose;
 use MooseX::Singleton;
 use Mojo::Redis;
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 
 use Cinderblock::Model::Game;
 use Cinderblock::Model::StordScor;
@@ -106,7 +105,7 @@ sub redis_block{
 sub decoded_redis_block{
    my $self = shift;
    my $thing = $self->redis_block(@_);
-   $thing = $json->decode($thing) if $thing;
+   $thing = decode_json($thing) if $thing;
    return $thing;
 }
 
@@ -115,7 +114,7 @@ sub game{
    my ($self,$game_id) = @_;
    return Cinderblock::Model::Game->from_id($game_id);
    my $game = $self->redis_block(hget => game => $game_id);
-   $game = $json->decode($game);
+   $game = decode_json($game);
    $game = Cinderblock::Model::Game->new(data => $game);
    return $game;
 }
@@ -130,7 +129,7 @@ sub stordscor{
 sub invite{
    my ($self,$code) = @_;
    my $invite = $self->redis_block(HGET => invite => $code);
-   $invite = $json->decode($invite);
+   $invite = decode_json($invite);
    return $invite;
 }
 
@@ -144,11 +143,11 @@ sub recently_active_games{
 sub game_role_ident{ # ($game_id, 'w'
    my ($self,$game_id, $role) = @_;
    my $game_roles_json = $self->redis_block(HGET => game_roles => $game_id);
-   my $game_roles = $json->decode($game_roles_json);
+   my $game_roles = decode_json($game_roles_json);
    my $ident_id = $game_roles->{$role};
    return unless $ident_id; #invitee unarrived...
    my $ident = $self->redis_block(HGET => ident => $ident_id);
-   return $json->decode($ident);
+   return decode_json($ident);
 }
 
 sub new_anon_ident{
@@ -159,7 +158,7 @@ sub new_anon_ident{
    my $ident_id = $self->redis_block(INCR => 'next_ident_id');
    my $username = 'anon-' . $ident_id;
    my $ident = {id => $ident_id, anon => 1, username => $username};
-   $self->redis_block(HSET => ident => $ident_id, $json->encode($ident));
+   $self->redis_block(HSET => ident => $ident_id, encode_json($ident));
    $self->redis_block(HSET => session_ident => $sessid, $ident_id);
    return $ident;
 }

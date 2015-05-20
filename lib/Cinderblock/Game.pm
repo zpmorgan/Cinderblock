@@ -1,10 +1,12 @@
 package Cinderblock::Game;
 use Modern::Perl;;
 use Mojo::Base 'Mojolicious::Controller';
-use Mojo::JSON;
-my $json = Mojo::JSON->new();
+use Mojo::JSON qw(decode_json encode_json);
 use Mojo::Redis;
 use Data::Dumper;
+
+use FindBin;
+use lib "$FindBin::Bin/../../Games-Go-Cinderblock/lib";
 
 use Games::Go::Cinderblock::Rulemap;
 use Games::Go::Cinderblock::Rulemap::Rect;
@@ -111,7 +113,7 @@ sub do_game{
          my $other_color = ($self->stash('my_colors')->[0] eq'b') ?'w':'b';
          my $invitecode = int rand(2<<30);
          my $invite = {game_id => $game_id, color => $other_color};
-         $self->getset_redis->hset(invite => $invitecode => $json->encode($invite));
+         $self->getset_redis->hset(invite => $invitecode => encode_json($invite));
          $self->stash(invite_code => $invitecode);
       }
    }
@@ -137,10 +139,10 @@ sub game_event_socket{
    my $game = $self->model->game($game_id);
    my $all_game_events = $game->game_events_ref;
    for my $e(@$all_game_events){
-      $ws->send($json->encode($e));
+      $ws->send(encode_json($e));
    }
    if ($game->status eq 'scoring'){
-      $ws->send( $json->encode( 
+      $ws->send( encode_json( 
             $self->model->stordscor($game_id)->generate_a_scorable_event()
          ));
    }
@@ -148,7 +150,7 @@ sub game_event_socket{
    $self->on(message => sub {
          my ($ws, $msg) = @_;
          say "Message: $msg";
-         my $msg_data = $json->decode($msg);
+         my $msg_data = decode_json($msg);
          my $action = $msg_data->{action};
          if($action eq 'attempt_move'){
             $self->attempt_move($msg_data);
@@ -185,10 +187,10 @@ sub game_event_socket{
          #delete $sub_redis->{_ids};
       });
    my $event = {event_type => 'hello', hello=>'hello'};
-   $ws->send($json->encode($event));
+   $ws->send(encode_json($event));
    Mojo::IOLoop->recurring(10 => sub{
          my $event = {event_type => 'ping', ping=>'ping'};
-         $ws->send($json->encode($event));
+         $ws->send(encode_json($event));
       });
 }
 
@@ -213,7 +215,7 @@ sub crap_out{
       type => 'denial',
       denial => $msg,
    };
-   $ws->send($json->encode($denial));
+   $ws->send(encode_json($denial));
 }
 use Carp::Always;
 use Digest::MD5 qw(md5_base64);
